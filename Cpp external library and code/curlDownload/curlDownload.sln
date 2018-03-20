@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.26730.16
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "curlDownload", "curlDownload\curlDownload.vcxproj", "{63A5637B-71DA-40AF-BE1F-AAFCACC00935}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Debug|x64.ActiveCfg = Debug|x64
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Debug|x64.Build.0 = Debug|x64
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Debug|x86.ActiveCfg = Debug|Win32
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Debug|x86.Build.0 = Debug|Win32
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Release|x64.ActiveCfg = Release|x64
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Release|x64.Build.0 = Release|x64
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Release|x86.ActiveCfg = Release|Win32
+		{63A5637B-71DA-40AF-BE1F-AAFCACC00935}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8C9CDCFE-DCFB-4CCC-97F8-48BD122122D6}
+	EndGlobalSection
+EndGlobal
