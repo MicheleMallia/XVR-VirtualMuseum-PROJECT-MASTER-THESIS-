@@ -1,0 +1,1081 @@
+/* Include s3d symbols */
+#include <Script3d.h>
+#include <Camera.s3d.h>
+#include "utils.s3d"
+#include <VirtualKey.h>
+
+#define SEL_PICK 	1
+
+/* Set global scene parameters */
+SET SCENE_FOV  = 60;
+SET SCENE_NEAR = 0.5;
+SET SCENE_FAR  = 1000;
+
+
+// TODO: put your global variables here
+var splitParams;
+
+//wikimedia glob var
+var getFiles, splitFiles, splitWiki;
+var arrayWiki = array(0);
+
+//google images glob var
+var getPage, splitOne, skimming;
+var arrayLink = array(0);
+
+//europeana glob var
+var getEuroFiles, getEuroData, splitEuro;
+
+//download image glob var
+var apath = array(0);
+var number;
+
+//textures glob var
+var atxt=array(0);
+
+//modularity glob var
+var nQuad;
+var slides = 0.0;
+var walls = 0.0;
+var cWalls;
+var modularity = false;
+var mod1 = false;
+var mod2 = false;
+var mod3 = false;
+var mod4 = false;
+var amesh = array(0);
+var mTopL, bbTop, bbTopOrig, resTop, mTopR, bbRight, bbRightOrig, lastTop, lastRight, lastBottom, mBottomR, bbBottom, bbBottomOrig, mBottomL, bbLeft, bbLeftOrig, lastLeft;
+
+//txt and obj glob var
+var mesh, mar, plane, txt, mat, obj, fh, fw;
+var bb = vector(6);
+var aObj = array(0);
+
+//selection plane
+var aSel= array(0);
+var matSel, planeSel, objSel, textSel;
+var rotMatSel = vector(16);
+
+//arrayMetadata
+var aMetadata = array(0);
+var artist, title, date, description;
+
+//console text glob variable
+var consArtist, consTitle, consDate, condDesc;
+var trig_desc = false;
+/* Camera globals */
+var CamPos = [0.0, 50.0, 30.0]; 	// camera position
+
+/* Light globals */
+var Light0;
+var PosL = [0.0, 10.0, 10.0];	// default light position
+
+//text
+var textTopLeft, textTopRight, textBottomRight, textBottomLeft, textCenterTop, textCenterRight, textCenterBottom, textCenterLeft;
+var ObjTextTopLeft, ObjTextTopRight, ObjTextBottomRight, ObjTextBottomLeft, ObjTextCenterTop, ObjTextCenterRight, objTextCenterBottom, ObjTextCenterLeft;
+var charSet = "ABCDEFGHILMNOPQRSTUVZ";
+var selectView = "1234567890";
+var aTextObj = array(0);
+var textAngle = 0.0;
+var LTIME = 0;
+var contText = 0;
+
+var trig_list = false;
+/* Function declarations */
+function CameraMoveMouse();
+function DrawGrid(col, size);
+
+
+function drawTop(cWalls, bb, bborg){
+	SETLOCALDIR();
+	if(cWalls==0){
+		resTop= bb;
+	}
+	else{
+		var mesh = CVmNewMesh("tCenter2.AAM");
+		mesh.Translate(bb[3]+bborg[3]+13.0, 0.0,bborg[5]-((bborg[5]-bborg[2])/2)-4);
+		var bbCenter = mesh.Getboundingbox();
+		textCenterTop = CVmText(charSet[contText], bbCenter[0]+((bbCenter[3]-bbCenter[0])/2), 50.0, "Arial", 0);
+		textCenterTop.setscale(5.0);
+		ObjTextCenterTop = CVmObj();
+		ObjTextCenterTop.LinkToText(textCenterTop);
+		ObjTextCenterTop.SetPosition(0.0, 0.0, bbCenter[2]+((bbCenter[5]-bbCenter[2])/2));
+		ObjTextCenterTop.setpivotpoint(bbCenter[0]+((bbCenter[3]-bbCenter[0]))/2, 50.0, bbCenter[2]+((bbCenter[5]-bbCenter[2]))/2);
+		aadd(aTextObj, ObjTextCenterTop);
+		contText++;
+		aadd(amesh, mesh);
+		resTop = bbCenter;
+		cWalls--;
+		drawTop(cWalls, resTop, bborg);
+	}
+	
+	return resTop;
+}
+
+function drawRight(cWalls, bb, bborg){
+	SETLOCALDIR();
+	if(cWalls==0){
+		resTop= bb;
+	}
+	else{
+		var mesh = CVmNewMesh("cRight2.AAM");
+		mesh.Translate(bborg[3]-((bborg[3]-bborg[0])/2)+10, 0.0,bb[5]+bborg[5]-16);
+		var bbCenter = mesh.Getboundingbox();
+		textCenterRight = CVmText(charSet[contText], bbCenter[0]+((bbCenter[3]-bbCenter[0])/2), 50.0, "Arial", 0);
+		textCenterRight.setscale(5.0);
+		ObjTextCenterRight = CVmObj();
+		ObjTextCenterRight.LinkToText(textCenterRight);
+		ObjTextCenterRight.SetPosition(0.0, 0.0, bbCenter[2]+((bbCenter[5]-bbCenter[2])/2));
+		ObjTextCenterRight.setpivotpoint(bbCenter[0]+((bbCenter[3]-bbCenter[0])/2), 50.0, bborg[2]+((bborg[5]-bborg[2])/2));
+		aadd(aTextObj, ObjTextCenterRight);
+		contText++;
+		aadd(amesh, mesh);
+		resTop = bbCenter;
+		cWalls--;
+		drawRight(cWalls, resTop, bborg);
+	}
+	
+	return resTop;
+}
+
+function drawBottom(cWalls, bborg){
+	SETLOCALDIR();
+	if(cWalls==0){
+		resTop= bborg;
+	}
+	else{
+		var mesh = CVmNewMesh("bCenter2.AAM");
+		mesh.Translate(bborg[0]-((bborg[3]-bborg[0])/2)+17, 0.0, bborg[5]-((bborg[5]-bborg[2])/2)-7);
+		var bbCenter = mesh.Getboundingbox();
+		textCenterBottom = CVmText(charSet[contText], bbCenter[0]+((bbCenter[3]-bbCenter[0])/2), 50.0, "Arial", 0);
+		textCenterBottom.setscale(5.0);
+		ObjTextCenterBottom = CVmObj();
+		ObjTextCenterBottom.LinkToText(textCenterBottom);
+		ObjTextCenterBottom.SetPosition(0.0, 0.0, bbCenter[2]+((bbCenter[5]-bbCenter[2])/2));
+		ObjTextCenterBottom.setpivotpoint(bbCenter[0]+((bbCenter[3]-bbCenter[0]))/2, 50.0, 0.0);
+		aadd(aTextObj, ObjTextCenterBottom);
+		contText++;
+		aadd(amesh, mesh);
+		bborg = bbCenter;
+		cWalls--;
+		drawBottom(cWalls,bborg);
+	}
+	
+	return resTop;
+}
+
+function drawLeft(cWalls, bborg){
+	SETLOCALDIR();
+	if(cWalls==0){
+		resTop= bborg;
+	}
+	else{
+		var mesh = CVmNewMesh("cLeft2.AAM");
+		mesh.Translate(0.0, 0.0,bborg[2]-((bborg[5]-bborg[2])/2)-1);
+		var bbCenter = mesh.Getboundingbox();
+		textCenterLeft = CVmText(charSet[contText], bbCenter[0]+((bbCenter[3]-bbCenter[0])/2), 50.0, "Arial", 0);
+		textCenterLeft.setscale(5.0);
+		ObjTextCenterLeft = CVmObj();
+		ObjTextCenterLeft.LinkToText(textCenterLeft);
+		ObjTextCenterLeft.SetPosition(0.0, 0.0, bbCenter[2]+((bbCenter[5]-bbCenter[2])/2));
+		ObjTextCenterLeft.setpivotpoint(bbCenter[0]+((bbCenter[3]-bbCenter[0]))/2, 50.0, bborg[2]-((bborg[5]-bborg[2])/2)-1);	
+		aadd(aTextObj, ObjTextCenterLeft);
+		contText++;
+		aadd(amesh, mesh);
+		bborg = bbCenter;
+		cWalls--;
+		drawLeft(cWalls, bborg);
+	}
+	
+	return resTop;
+}
+
+//download images
+function curlDownload(arrayLink, number, mode){
+	SETLOCALDIR();
+	var cont = 0;
+	var lib = CVmExternDLL("curlDownload.dll");
+	lib.__AddFunction(C_INT, "curlDownload", C_PSTR, C_PSTR);
+	var res;
+	var begin, end, elapsed;
+	for(var i = 0; i<number; i++){
+		begin = gettime();
+		if(i == len(arrayLink)){
+			break;
+		}
+		var path = GetCurrentDir()+"\\images\\";
+		path = path + "img"+str(i)+".jpg";
+		if(mode == 2 || mode == 3){
+			res = lib.curlDownload(arrayLink[i][0], path);
+		}
+		else{
+			res = lib.curlDownload(arrayLink[i], path);
+		}
+		end = gettime();
+		elapsed = end-begin;
+		outputln("TEMPO: "+str(elapsed));
+		outputln(res," + ",path," "+str(cont));
+		if(res == 0){
+			aadd(apath, "\\images\\img"+str(i)+".jpg");
+			if(mode == 2|| mode==3){
+				var arrayData = array(0);
+				artist = arrayLink[i][1];
+				if(str_contains(artist, "\n")){
+					artist = str_replace(artist, "\n", "");
+				}
+				title = arrayLink[i][2];
+				if(str_contains(title, "\n")){
+					title = str_replace(title, "\n", "");
+				}
+				date = arrayLink[i][3];
+				if(str_contains(date, "\n")){
+					date = str_replace(date, "\n", "");
+				}
+				description = arrayLink[i][4];
+				
+				var contChar = 0;
+				for(var i = 0; i<len(description);i++){
+					if(contChar>100 && description[i] == " "){
+						description[i]="\n";
+						contChar=0;
+					}
+					else{
+						contChar++;	
+					}
+				}
+				
+				
+				aadd(arrayData, artist);
+				aadd(arrayData, title);
+				aadd(arrayData, date);
+				aadd(arrayData, description);
+				aadd(aMetadata, arrayData);
+			}
+		}
+		else{
+			adel(arrayLink, i);
+			i = i-1;
+			if(mode ==1){
+				adel(skimming,i);
+			}
+		}
+		cont++;
+	}
+}
+
+function makeTextures(){
+	for(var i =0; i<len(apath);i++){
+		if(FileExist(apath[i])){
+			var txt = CVmTexture(apath[i], VR_NO_FILTER);
+			aadd(atxt, txt);
+		}
+	}
+}
+
+function callModularity(num){
+
+	slides = ToFloat(num);
+	slides = slides/4.0;
+	if(num%4 != 0.0){
+		slides = int(slides +1);
+		walls = slides;
+		while(!walls%4 == 0){
+			walls = walls+1;
+		}
+		cWalls = walls/4;
+	}
+	else{
+		walls = slides;
+		while(!walls%4 == 0){
+			walls = walls+1;
+		}
+		cWalls = walls/4;
+	}
+	outputln(slides);
+	outputln(walls);
+	outputln(cWalls);
+	
+	setlocaldir();
+	
+	mTopL = CVmNewMesh("tLeft2.AAM");
+	bbTop = mTopL.Getboundingbox();
+	bbTopOrig = bbTop;
+	aadd(amesh, mTopL);
+	textTopLeft = CVmText(charSet[contText], bbTop[0]+((bbTop[3]-bbtop[0])/2), 50.0, "Arial", 0);
+	textTopLeft.setscale(5.0);
+	ObjTextTopLeft = CVmObj();
+	ObjTextTopLeft.LinkToText(textTopLeft);
+	ObjTextTopLeft.SetPosition(bbTop[0]+((bbTop[3]-bbtop[0])/2), 0.0, bbTop[2]+((bbTop[5]-bbtop[2])/2));
+	ObjTextTopLeft.setpivotpoint(bbTop[0]+((bbTop[3]-bbTop[0]))/2, 50.0, bbTop[2]+((bbTop[5]-bbTop[2]))/2);
+	aadd(aTextObj, ObjTextTopLeft);
+	contText++;
+	lastTop = drawTop(cWalls, bbTop, bbTopOrig);
+	
+	
+	mTopR = CVmNewMesh("tRight2.AAM");
+	bbRight = mTopR.Getboundingbox();
+	mTopR.Translate(lastTop[3]+bbRight[3]+13.0,0.0,0.0);
+	bbRightOrig = mTopR.Getboundingbox();;
+	aadd(amesh, mTopR);
+	textTopRight = CVmText(charSet[contText], bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0])/2), 50.0, "Arial", 0);
+	textTopRight.setscale(5.0);
+	ObjTextTopRight = CVmObj();
+	ObjTextTopRight.LinkToText(textTopRight);
+	ObjTextTopRight.SetPosition(0.0, 0.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2])/2));
+	ObjTextTopRight.setpivotpoint(bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0]))/2, 50.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2]))/2);
+	aadd(aTextObj, ObjTextTopRight);
+	contText++;
+	lastRight = drawRight(cWalls, bbRight, bbRightOrig);
+	
+	
+	
+	mBottomR = CVmNewMesh("bRight2.AAM");
+	mBottomR.Translate(lastRight[3]-((lastRight[3]-lastRight[0])/2)+7,0.0,lastRight[5]-((lastRight[2]-lastRight[5])/2)-13);
+	bbBottomOrig = mBottomR.Getboundingbox();
+	aadd(amesh, mBottomR);
+	textBottomRight = CVmText(charSet[contText], bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0])/2), 50.0, "Arial", 0);
+	textBottomRight.setscale(5.0);
+	ObjTextBottomRight = CVmObj();
+	ObjTextBottomRight.LinkToText(textBottomRight);
+	ObjTextBottomRight.SetPosition(0.0, 0.0, bbBottomOrig[2]+((bbBottomOrig[5]-bbBottomOrig[2])/2));
+	
+	ObjTextBottomRight.setpivotpoint(bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0]))/2, 50.0, 0.0);
+	aadd(aTextObj, ObjTextBottomRight);
+	contText++;
+	lastBottom = drawBottom(cWalls, bbBottomOrig);
+	
+	
+	mBottomL = CVmNewMesh("bLeft2.AAM");
+	mBottomL.Translate(0.0,0.0,lastRight[5]-((lastRight[2]-lastRight[5])/2)-13);
+	bbLeftOrig = mBottomL.Getboundingbox();
+	aadd(amesh, mBottomL);
+	textBottomLeft = CVmText(charSet[contText], bbLeftOrig[0]+((bbLeftOrig[3]-bbLeftOrig[0])/2), 50.0, "Arial", 0);
+	textBottomLeft.setscale(5.0);
+	ObjTextBottomLeft = CVmObj();
+	ObjTextBottomLeft.LinkToText(textBottomLeft);
+	ObjTextBottomLeft.SetPosition(0.0, 0.0, bbLeftOrig[2]+((bbLeftOrig[5]-bbLeftOrig[2])/2));
+	ObjTextBottomLeft.setpivotpoint(bbLeftOrig[0]+((bbLeftOrig[3]-bbLeftOrig[0]))/2, 50.0, bbLeftOrig[2]-((bbLeftOrig[5]-bbLeftOrig[2]))/2);	
+	aadd(aTextObj, ObjTextBottomLeft);
+	contText++;
+	lastLeft = drawLeft(cWalls, bbLeftOrig);
+}
+
+function callMod1(num){
+	setlocaldir();
+	
+	mTopL = CVmNewMesh("tLeft2.AAM");
+	bbTop = mTopL.Getboundingbox();
+	bbTopOrig = bbTop;
+	aadd(amesh, mTopL);
+	textTopLeft = CVmText(charSet[0], bbTop[0]+((bbTop[3]-bbtop[0])/2), 50.0, "Arial", 0);
+	textTopLeft.setscale(5.0);
+	ObjTextTopLeft = CVmObj();
+	ObjTextTopLeft.LinkToText(textTopLeft);
+	ObjTextTopLeft.SetPosition(bbTop[0]+((bbTop[3]-bbtop[0])/2), 0.0, bbTop[2]+((bbTop[5]-bbtop[2])/2));
+	ObjTextTopLeft.setpivotpoint(bbTop[0]+((bbTop[3]-bbTop[0]))/2, 50.0, bbTop[2]+((bbTop[5]-bbTop[2]))/2);
+	aadd(aTextObj, ObjTextTopLeft);
+	contText++;
+}
+
+function callMod2(num){
+	setlocaldir();
+	
+	mTopL = CVmNewMesh("tLeft2.AAM");
+	bbTop = mTopL.Getboundingbox();
+	bbTopOrig = bbTop;
+	aadd(amesh, mTopL);
+	textTopLeft = CVmText(charSet[0], bbTop[0]+((bbTop[3]-bbtop[0])/2), 50.0, "Arial", 0);
+	textTopLeft.setscale(5.0);
+	ObjTextTopLeft = CVmObj();
+	ObjTextTopLeft.LinkToText(textTopLeft);
+	ObjTextTopLeft.SetPosition(bbTop[0]+((bbTop[3]-bbtop[0])/2), 0.0, bbTop[2]+((bbTop[5]-bbtop[2])/2));
+	ObjTextTopLeft.setpivotpoint(bbTop[0]+((bbTop[3]-bbTop[0]))/2, 50.0, bbTop[2]+((bbTop[5]-bbTop[2]))/2);
+	aadd(aTextObj, ObjTextTopLeft);
+	
+	mTopR = CVmNewMesh("tRight2.AAM");
+	bbRight = mTopR.Getboundingbox();
+	mTopR.Translate((bbRight[3]*2)+13.0,0.0,0.0);
+	bbRightOrig = mTopR.Getboundingbox();;
+	aadd(amesh, mTopR);
+	textTopRight = CVmText(charSet[1], bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0])/2), 50.0, "Arial", 0);
+	textTopRight.setscale(5.0);
+	ObjTextTopRight = CVmObj();
+	ObjTextTopRight.LinkToText(textTopRight);
+	ObjTextTopRight.SetPosition(0.0, 0.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2])/2));
+	ObjTextTopRight.setpivotpoint(bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0]))/2, 50.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2]))/2);
+	aadd(aTextObj, ObjTextTopRight);
+	
+	contText = 2;
+	
+}
+
+function callMod3(num){
+	setlocaldir();
+	
+	mTopL = CVmNewMesh("tLeft2.AAM");
+	bbTop = mTopL.Getboundingbox();
+	bbTopOrig = bbTop;
+	aadd(amesh, mTopL);
+	textTopLeft = CVmText(charSet[0], bbTop[0]+((bbTop[3]-bbtop[0])/2), 50.0, "Arial", 0);
+	textTopLeft.setscale(5.0);
+	ObjTextTopLeft = CVmObj();
+	ObjTextTopLeft.LinkToText(textTopLeft);
+	ObjTextTopLeft.SetPosition(bbTop[0]+((bbTop[3]-bbtop[0])/2), 0.0, bbTop[2]+((bbTop[5]-bbtop[2])/2));
+	ObjTextTopLeft.setpivotpoint(bbTop[0]+((bbTop[3]-bbTop[0]))/2, 50.0, bbTop[2]+((bbTop[5]-bbTop[2]))/2);
+	aadd(aTextObj, ObjTextTopLeft);
+	
+	mTopR = CVmNewMesh("tRight2.AAM");
+	bbRight = mTopR.Getboundingbox();
+	mTopR.Translate((bbRight[3]*2)+13.0,0.0,0.0);
+	bbRightOrig = mTopR.Getboundingbox();;
+	aadd(amesh, mTopR);
+	textTopRight = CVmText(charSet[1], bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0])/2), 50.0, "Arial", 0);
+	textTopRight.setscale(5.0);
+	ObjTextTopRight = CVmObj();
+	ObjTextTopRight.LinkToText(textTopRight);
+	ObjTextTopRight.SetPosition(0.0, 0.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2])/2));
+	ObjTextTopRight.setpivotpoint(bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0]))/2, 50.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2]))/2);
+	aadd(aTextObj, ObjTextTopRight);
+	
+	mBottomR = CVmNewMesh("bRight2.AAM");
+	mBottomR.Translate(bbRightOrig[3]-((bbRightOrig[3]-bbRightOrig[0])/2)+7,0.0,bbRightOrig[5]-((bbRightOrig[2]-bbRightOrig[5])/2)-13);
+	bbBottomOrig = mBottomR.Getboundingbox();
+	aadd(amesh, mBottomR);
+	textBottomRight = CVmText(charSet[2], bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0])/2), 50.0, "Arial", 0);
+	textBottomRight.setscale(5.0);
+	ObjTextBottomRight = CVmObj();
+	ObjTextBottomRight.LinkToText(textBottomRight);
+	ObjTextBottomRight.SetPosition(0.0, 0.0, bbBottomOrig[2]+((bbBottomOrig[5]-bbBottomOrig[2])/2));
+	ObjTextBottomRight.setpivotpoint(bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0]))/2, 50.0, bbBottomOrig[2]-((bbBottomOrig[5]-bbBottomOrig[2]))/2);
+	aadd(aTextObj, ObjTextBottomRight);
+	
+	contText = 3;
+}
+
+function callMod4(num){
+	
+	setlocaldir();
+	
+	mTopL = CVmNewMesh("tLeft2.AAM");
+	bbTop = mTopL.Getboundingbox();
+	bbTopOrig = bbTop;
+	aadd(amesh, mTopL);
+	textTopLeft = CVmText(charSet[0], bbTop[0]+((bbTop[3]-bbtop[0])/2), 50.0, "Arial", 0);
+	textTopLeft.setscale(5.0);
+	ObjTextTopLeft = CVmObj();
+	ObjTextTopLeft.LinkToText(textTopLeft);
+	ObjTextTopLeft.SetPosition(bbTop[0]+((bbTop[3]-bbtop[0])/2), 0.0, bbTop[2]+((bbTop[5]-bbtop[2])/2));
+	ObjTextTopLeft.setpivotpoint(bbTop[0]+((bbTop[3]-bbTop[0]))/2, 50.0, bbTop[2]+((bbTop[5]-bbTop[2]))/2);
+	aadd(aTextObj, ObjTextTopLeft);
+	
+	mTopR = CVmNewMesh("tRight2.AAM");
+	bbRight = mTopR.Getboundingbox();
+	mTopR.Translate((bbRight[3]*2)+13.0,0.0,0.0);
+	bbRightOrig = mTopR.Getboundingbox();;
+	aadd(amesh, mTopR);
+	textTopRight = CVmText(charSet[1], bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0])/2), 50.0, "Arial", 0);
+	textTopRight.setscale(5.0);
+	ObjTextTopRight = CVmObj();
+	ObjTextTopRight.LinkToText(textTopRight);
+	ObjTextTopRight.SetPosition(0.0, 0.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2])/2));
+	ObjTextTopRight.setpivotpoint(bbRightOrig[0]+((bbRightOrig[3]-bbRightOrig[0]))/2, 50.0, bbRightOrig[2]+((bbRightOrig[5]-bbRightOrig[2]))/2);
+	aadd(aTextObj, ObjTextTopRight);
+	
+	mBottomR = CVmNewMesh("bRight2.AAM");
+	mBottomR.Translate(bbRightOrig[3]-((bbRightOrig[3]-bbRightOrig[0])/2)+7,0.0,bbRightOrig[5]-((bbRightOrig[2]-bbRightOrig[5])/2)-13);
+	bbBottomOrig = mBottomR.Getboundingbox();
+	aadd(amesh, mBottomR);
+	textBottomRight = CVmText(charSet[2], bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0])/2), 50.0, "Arial", 0);
+	textBottomRight.setscale(5.0);
+	ObjTextBottomRight = CVmObj();
+	ObjTextBottomRight.LinkToText(textBottomRight);
+	ObjTextBottomRight.SetPosition(0.0, 0.0, bbBottomOrig[2]+((bbBottomOrig[5]-bbBottomOrig[2])/2));
+	ObjTextBottomRight.setpivotpoint(bbBottomOrig[0]+((bbBottomOrig[3]-bbBottomOrig[0]))/2, 50.0, bbBottomOrig[2]-((bbBottomOrig[5]-bbBottomOrig[2]))/2);
+	aadd(aTextObj, ObjTextBottomRight);
+	
+	mBottomL = CVmNewMesh("bLeft2.AAM");
+	mBottomL.Translate(0.0,0.0,bbRightOrig[5]-((bbRightOrig[2]-bbRightOrig[5])/2)-13);
+	bbLeftOrig = mBottomL.Getboundingbox();
+	aadd(amesh, mBottomL);
+	textBottomLeft = CVmText(charSet[3], bbLeftOrig[0]+((bbLeftOrig[3]-bbLeftOrig[0])/2), 50.0, "Arial", 0);
+	textBottomLeft.setscale(5.0);
+	ObjTextBottomLeft = CVmObj();
+	ObjTextBottomLeft.LinkToText(textBottomLeft);
+	ObjTextBottomLeft.SetPosition(0.0, 0.0, bbLeftOrig[2]+((bbLeftOrig[5]-bbLeftOrig[2])/2));
+	ObjTextBottomLeft.setpivotpoint(bbLeftOrig[0]+((bbLeftOrig[3]-bbLeftOrig[0]))/2, 50.0, bbLeftOrig[2]-((bbLeftOrig[5]-bbLeftOrig[2]))/2);
+	aadd(aTextObj, ObjTextBottomLeft);
+	
+	contText = 4;
+}
+
+function populate(){
+	var contQuad = 0;
+	for(var i = 0; i<len(amesh); i++){
+		if(contQuad == len(atxt)){
+				adel(amesh, i);
+				adel(aTextObj, i);
+				contText--;
+				i--;
+			}
+		else{
+			var arrayIds = amesh[i].GetSubsetsFromName(
+					"Quad"
+			);
+			for(var j = 0; j<len(arrayIds); j++){
+				if(contQuad == len(atxt)){
+					break;
+				}
+				amesh[i].Hide(arrayIds[j]);
+				bb = amesh[i].SubsetGetBoundingBox(arrayIds[j]);
+				mat = CVmMaterial();
+				plane = CVmNewMesh(VRP_PLANE);
+				mat.SetTexture(atxt[contQuad]);
+				plane.ForceMaterial(mat);
+				obj = CVmObj(plane);
+				var pbb = vector(6);
+				var pbbInt = amesh[i].GetSubsetsFromName("wall");
+				pbb = amesh[i].SubsetGetBoundingBox(pbbInt[0]);
+				
+				if(!str_contains(amesh[i].SubsetGetDescription(arrayIds[j]), "_90")){
+					var dimOptX = Ceil((pbb[3]-pbb[0])/2)-20;
+					fw = 50*(ToFloat(atxt[contQuad].OriginalWidth)/ToFloat(atxt[contQuad].OriginalHeight));
+					fh = 50;
+					if(fw>dimOptX){
+						//fh = (70/2)-10;
+						var cont = 1;
+						while(fw>dimOptX){
+							fw= fw-cont;
+							cont = cont+1;
+							//outputln("resize imgX"+str(i)+":"+str(fw)+" - "+str(fh));
+						}
+					}
+					
+					obj.SetScale(fw, fh, 0.0);
+				}
+				
+				else if(str_contains(amesh[i].SubsetGetDescription(arrayIds[j]), "_90")){
+					var dimOptZ = Ceil((pbb[5]-pbb[2])/2)-20;
+					fw = 50*(ToFloat(atxt[contQuad].OriginalWidth)/ToFloat(atxt[contQuad].OriginalHeight));
+					fh = 50;
+					if(fw>dimOptZ){
+						//fh = (70/2)-10;
+						var cont = 1;
+						while(fw>dimOptZ){
+							fw= fw-cont;
+							cont = cont+1;
+							//outputln("resize imgZ"+str(i)+":"+str(fw)+" - "+str(fh));
+						}
+					}
+					
+					obj.SetScale(fw, fh, 0.0);
+					obj.Rotate(90, 0,1,0);
+				}
+				obj.SetPosition(bb[0]+((bb[3]-bb[0])/2), bb[1]+((bb[4]-bb[1])/2), bb[2]+((bb[5]-bb[2])/2));
+				aadd(aObj, obj);
+				contQuad++;
+			}
+			
+		}
+	}
+}
+
+//Get wikimedia files
+function getWikimediaFiles(url, num){
+	SETLOCALDIR();
+ 	var libreria = CVmExternDLL("curlWikimedia.dll");
+	libreria.__AddFunction(C_PSTR, "decripta", C_PSTR);
+	var b = space(80000000);																								//+str(num)+
+	var myurl = "https://commons.wikimedia.org/w/api.php?format=xml&action=query&list=categorymembers&cmtitle="+url+"&cmlimit=500";
+	b = libreria.decripta(myurl);
+	
+	return b;
+}
+
+//Get metadata information about image
+function getWikiMeta(files){
+	var result = array(0);
+	SETLOCALDIR();
+	var libreria = CVmExternDLL("curlGetWikimediaUrl.dll");
+	libreria.__AddFunction(C_PSTR, "decripta", C_PSTR);
+	for(var i = 0; i<len(files);i++){
+		if(str_contains(files[i], ".jpg")){
+			outputln("Progressione -----> "+files[i]);
+			var b = space(80000000);
+			var myurl = "https://commons.wikimedia.org/w/api.php?action=query&prop=imageinfo&format=json&&iiprop=url%7Cextmetadata&iilimit=10&titles="+files[i]+"&iiurlwidth=800";
+			b = libreria.decripta(myurl);
+			aadd(result, b);
+		}
+	}
+	return result;
+}
+
+function splitArray(arr){
+	var newArr = array(0);
+	for(var i=0;i<len(arr);i++){
+		var temp = Split(
+			arr[i],
+			"$"
+		);
+		aadd(newArr, temp);
+	}
+	
+	return newArr;
+}
+
+//In case users select Categories query
+function caseWikimedia(splitP){
+	getFiles = getWikimediaFiles(splitP[0], val(splitP[1]));
+	splitFiles = Split(
+		getFiles,
+		"\n"
+	);
+	adel(splitFiles, len(splitFiles)-1);
+	
+	var randomString = "";
+	var contValidRandom =0;
+	if(len(splitFiles)>val(splitP[1])){
+		while(contValidRandom!=val(splitP[1])){
+			var random = Rand(len(splitFiles)-1);
+			if(!str_contains(randomString, str(random))){
+				randomString = randomString + str(random)+ ",";
+				contValidRandom++;
+			}
+		}
+		
+		var randomArray = Split(
+			randomString,
+			","
+		);
+		
+		adel(randomArray, len(randomArray)-1);
+		
+		var randomFiles = array(0);
+		for(var i = 0; i<len(randomArray);i++){
+			aadd(randomFiles, splitFiles[val(randomarray[i])]);
+		}
+		
+		arrayWiki = getWikiMeta(randomFiles);
+	}
+	
+	else{
+		arrayWiki = getWikiMeta(splitFiles);
+	}
+		
+	
+	
+	splitWiki = splitArray(arrayWiki);
+	number = len(splitWiki);
+	if(val(splitP[1])>number){
+		curlDownload(splitWiki, number, val(splitP[2]));
+	}
+	else{
+		curlDownload(splitWiki, val(splitP[1]), val(splitP[2]));
+	}
+	
+	makeTextures();
+	nQuad = len(atxt);
+	outputln(nQuad);
+	modularity = (nQuad>16);
+	mod1 = (nQuad <= 4);
+	mod2 = ((nQuad >4) && (nQuad<9));
+	mod3 = ((nQuad>8) && (nQuad<13));
+	mod4 = ((nQuad > 12) && (nQuad <17));
+	if(modularity){
+		callModularity(nQuad);
+	}
+	else if(mod1){
+		callMod1(nQuad);
+	}
+	else if(mod2){
+		callMod2(nQuad);
+	}
+	else if(mod3){
+		callMod3(nQuad);
+	}
+	else if(mod4){
+		callMod4(nQuad);
+	}
+	populate();
+
+}
+
+function getGoogle(string){
+	SETLOCALDIR();
+ 	var libreria = CVmExternDLL("curlDll.dll");
+	libreria.__AddFunction(C_PSTR, "decripta", C_PSTR);
+	var b = space(800000);
+	var myurl = "https://www.google.it/search?q="+string+"+painting&tbm=isch&source=lnt&tbs=isz:lt,islt:xga&sa=X&ved=0ahUKEwjumo6jrI7YAhXN6aQKHRsgA7sQpwUIHw";
+	b = libreria.decripta(myurl);
+	return b;
+}
+
+function splitInit(string){
+	var arr;
+	arr = Split(
+		string,
+		"{"
+	);
+	
+	return arr;
+}
+
+function getOuTag(splitInit){
+	var skim = array(0);
+	for(var i = 0; i<len(splitInit); i++){
+		if(str_contains(splitInit[i], "\"ou\":")){
+			aadd(skim, splitInit[i]);
+		}
+	}
+	return skim;
+}
+
+function getPath(skimmed){
+	var pathImg = array(0);
+	for(var i = 0; i<skimmed; i++){
+		var temp = Split(
+			skimming[i],
+			"\"ou\":"
+		);
+		var temp2 = Split(
+			temp[1],
+			"\""
+		);
+		
+		var temp3 = Split(
+			temp2[1],
+			".jpg"
+		);
+		
+		if(len(temp3)>1){
+			aadd(pathImg, temp2[1]);
+		}
+		
+	}
+	return pathImg;
+}
+
+function caseGoogleImages(splitP){
+	getPage = getGoogle(splitP[0]);
+	splitOne = splitInit(getPage);
+	skimming = getOuTag(splitOne);
+	arrayLink = getPath(val(splitP[1]));
+	curlDownload(arrayLink, len(arrayLink), val(splitP[2]));
+	makeTextures();
+	nQuad = len(atxt);
+	outputln(nQuad);
+	outputln(len(arrayLink));
+	modularity = (nQuad>16);
+	mod1 = (nQuad <= 4);
+	mod2 = ((nQuad >4) && (nQuad<9));
+	mod3 = ((nQuad>8) && (nQuad<13));
+	mod4 = ((nQuad > 12) && (nQuad <17));
+	if(modularity){
+		callModularity(nQuad);
+	}
+	else if(mod1){
+		callMod1(nQuad);
+	}
+	else if(mod2){
+		callMod2(nQuad);
+	}
+	else if(mod3){
+		callMod3(nQuad);
+	}
+	else if(mod4){
+		callMod4(nQuad);
+	}
+	populate();
+
+}
+
+function getEuropeanaFiles(string, num){
+	SETLOCALDIR();
+ 	var libreria = CVmExternDLL("curlEuropeana.dll");
+	libreria.__AddFunction(C_PSTR, "decripta", C_PSTR);
+	var b = space(80000000);
+	var myurl = "https://www.europeana.eu/api/v2/search.json?wskey=8oZku3pku&query="+string+"&rows="+str(num)+"&media=true&qf=TYPE:IMAGE";
+	b = libreria.decripta(myurl);
+	return b;
+}
+
+function getEuropeanaData(file){
+	var result = array(0);
+	SETLOCALDIR();
+	var libreria = CVmExternDLL("curlGetEuropeanaUrl.dll");
+	libreria.__AddFunction(C_PSTR, "decripta", C_PSTR);
+	for(var i = 0; i<len(file);i++){
+		var tempistica = Split(file[i], "http://");
+		var temporale = "https://"+tempistica[1];
+		outputln("Progressione ----> "+temporale+"  "+str(i));
+		var b = space(8000000000000);
+		var myurl = temporale;
+		b = libreria.decripta(myurl);
+		aadd(result, b);
+	}
+	return result;
+}
+
+
+
+function caseEuropeana(splitP){
+	getEuroFiles = getEuropeanaFiles(splitP[0], val(splitP[1]));
+	var splitLink = Split(
+		getEuroFiles,
+		"$"
+	);
+	adel(splitLink, len(splitLink)-1);
+	getEuroData = getEuropeanaData(splitLink);
+	splitEuro = splitArray(getEuroData);
+	number = len(splitEuro);
+	if(val(splitP[1])>number){
+		curlDownload(splitEuro, number, val(splitP[2]));
+	}
+	else{
+		curlDownload(splitEuro, val(splitP[1]), val(splitP[2]));
+	}
+	makeTextures();
+	
+	nQuad = len(atxt);
+	outputln(nQuad);
+	modularity = (nQuad>16);
+	mod1 = (nQuad <= 4);
+	mod2 = ((nQuad >4) && (nQuad<9));
+	mod3 = ((nQuad>8) && (nQuad<13));
+	mod4 = ((nQuad > 12) && (nQuad <17));
+	if(modularity){
+		callModularity(nQuad);
+	}
+	else if(mod1){
+		callMod1(nQuad);
+	}
+	else if(mod2){
+		callMod2(nQuad);
+	}
+	else if(mod3){
+		callMod3(nQuad);
+	}
+	else if(mod4){
+		callMod4(nQuad);
+	}
+	populate();
+	
+}
+
+function select(obj){
+	
+	If(Keystatus("D")){
+		trig_desc=true;
+	}
+	
+	if(trig_desc){
+		var index = obj.getid();
+		var getArtist = aMetadata[index][0];
+		var getTitle = aMetadata[index][1];
+		var getDate = aMetadata[index][2];
+		var getDescription = aMetadata[index][3];
+		ConsoleText(0.02, 0.95, "Artist: "+getArtist);
+		ConsoleText(0.02, 0.90, "Title: "+getTitle);
+		ConsoleText(0.02, 0.85, "Date: "+getDate);
+		ConsoleText(0.02, 0.80, "Description: "+getDescription);
+	}
+}
+
+function viewList(){
+	if(trig_list){
+		var spacing = 0.98;
+		var spacingMetadata = 0.96;
+		var contUno = 0;
+		var contDue = 0;
+		for(var i = 0; i<len(aTextObj);i++){
+			ConsoleText(0.55, spacing, "Quadri presenti nella stanza "+charSet[i]+": "+selectView[i]);
+			spacing = spacing - 0.13;
+		}
+		for(var i =0; i<len(aMetadata);i++){
+			if(contUno == len(aMetadata)){
+				break;
+			}
+			else if(contDue==4){
+				contDue = 0;
+				spacingMetadata = spacingMetadata - 0.05;
+			}
+			ConsoleText(0.55, spacingMetadata, aMetadata[contUno][0]+" - "+aMetadata[contUno][1]);
+			spacingMetadata = spacingMetadata - 0.02;
+			contUno++;
+			contDue++;
+		}
+	}
+}
+
+function OnDownload()
+{
+	// TODO: download your resources here
+	// E.g.: FileDownload("resource.ext");
+}
+
+
+
+function OnInit(params)
+{
+	/* initialize camera */
+	CameraGetCurrent().SetPosition(CamPos);
+	ConsoleFont("Arial", 13);
+	ConsoleColor(1.0,1.0,1.0,1);
+	
+	
+	//splitto la stringa dei parametri in entrata
+	splitParams = Split(
+		params,
+		","
+	);
+	
+	
+	//setup all search query
+	switch(val(splitParams[2])){
+		case 1: caseGoogleImages(splitParams);break;
+		case 2: caseWikimedia(splitParams);break;
+		case 3: caseEuropeana(splitParams);break;
+	}
+	
+	
+	//selection
+	for(var i = 0;i<len(aobj);i++){
+		matSel = CVmMaterial();
+		planeSel = CVmNewMesh(VRP_PLANE);
+		var vecCol = vector(4);
+		vecCol[0] = 0;
+		vecCol[1] = 0;
+		vecCol[2] = 0;
+		vecCol[3] = 0.0;
+		textSel = CVmTexture(1,1,VR_RGBA_TEXTURE,vecCol);
+		matSel.setTexture(textSel);
+		planeSel.ForceMaterial(matSel);
+		objSel = CVmObj(planeSel);
+		objSel.setposition(aobj[i].getPosition());
+		objSel.setRotationmatrix(aobj[i].getRotationmatrix());
+		objSel.Normalize(aobj[i].getscale()[0]);
+		//objSel.SetScale();
+		objSel.SetId(i);
+		aadd(asel, objSel);
+	}
+
+}
+
+	
+
+function OnFrame()
+{
+	/* manage camera */
+	CameraMoveMouse();
+
+	SceneBegin();
+	for(var i =0; i<len(amesh);i++){
+		amesh[i].Draw(VR_NO_SHADING);
+	}
+	for(var i = 0; i<len(aObj);i++){
+		aObj[i].Draw(VR_NO_SHADING);
+	}
+	
+	for(var i = 0; i<len(asel); i++){
+		asel[i].Draw();
+		if(selection(asel[i], SEL_PASS) && (val(splitParams[2]) ==2 || val(splitParams[2]) == 3)){
+			var getPos = asel[i].getposition();
+			var getCamPos = cameragetcurrent().getposition();
+			var x = (getPos[0]-getcampos[0]);
+			var y = (getPos[1]-getcampos[1]);
+			var z = (getPos[2]-getcampos[2]);
+			var distance = sqrt((x*x)+(y*y)+(z*z));
+			if(distance<80.0){
+				ConsoleText(0.01, 0.035, "Press D and pass to the quad to get description\nPress N to hide description.");
+				ConsoleText(0.75, 0.02, "Distance: "+str(distance));
+				select(asel[i]);	
+			}
+		}
+	}
+	
+	
+	for(var i = 0; i<len(aTextObj);i++){
+		var temp = gettime();
+		var Ltime = 0;
+		if(temp-ltime>10){
+			textAngle += 0.0001;
+			aTextObj[i].Rotate(textAngle, 0,1,0);
+			//var getPivot = atextobj[i].getPosition();
+			//atextobj[i].setpivotpoint(getPivot);
+		}
+		aTextObj[i].Draw();
+	}	
+	
+	if(KeyStatus("H")){
+		trig_list = !trig_list;
+	}
+	
+	viewList();
+		
+	if(keyStatus("N")){
+		trig_desc=false;
+	}
+	// TODO: put your drawing code here
+	
+	for(var i =0; i<10;i++){
+		if(trig_list && KeyStatus(selectView[i])){		
+			if(val(selectView[i])>contText){
+				break;
+			}
+			else{
+				var pos = amesh[i].getboundingbox();
+				var mX = pos[0] + ((pos[3]-pos[0])/2);
+				var mY = 50.0;
+				var mZ = pos[2] + ((pos[5]-pos[2])/2);				
+				CameraSetPosition(mX, mY, mZ);
+				outputln(amesh[i].getboundingbox());
+				outputln(charSet[i]);
+			}
+		}
+	}
+	
+	
+	SceneEnd();
+}
+
+
+
+function DownloadReady(RequestID)
+{
+	// TODO
+}
+
+
+
+function OnTimer()
+{
+	
+}
+
+
+function OnEvent(eventID, wparam, lparam){
+	// TODO: put your events handling code here
+}
+
+function OnError(){
+	// TODO: put your errors handling code here
+}
+
+
+function OnExit()
+{
+	// TODO: put your cleanup code here
+}
+
+
+
+// Camera manager (using mouse)
+function CameraMoveMouse()
+{	
+
+	CameraMoveMouse_MBL_LC();
+
+}
+
+
+
+

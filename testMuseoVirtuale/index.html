@@ -1,0 +1,210 @@
+<html>
+	<head>
+		<title>
+			Virtual Museum Generator 
+		</title>
+		<style>
+		body{
+			background: #085078;  /* fallback for old browsers */
+			background: -webkit-linear-gradient(to right, #85D8CE, #085078);  /* Chrome 10-25, Safari 5.1-6 */
+			background: linear-gradient(to right, #85D8CE, #085078); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+		}
+		input[type=text], select{
+		    width: 75%;
+		    padding: 12px 20px;
+		    margin: 8px 100px 8px 150px;
+		    display: inline-block;
+		    border: 1px solid #ccc;
+		    border-radius: 4px;
+		    box-sizing: border-box;
+		    font-family: 'Press Start 2P', cursive;
+		}
+		button {
+		    width: 75%;
+		    background-color: #4CAF50;
+		    color: white;
+		    padding: 12px 20px;
+		    margin: 8px 100px 8px 150px;
+		    border: none;
+		    border-radius: 4px;
+		    cursor: pointer;
+		    font-family: 'Press Start 2P', cursive;
+		}
+
+		button:hover {
+		    background-color: #45a049;
+		    font-family: 'Press Start 2P', cursive;
+		}
+		
+		#title, #subtitle{
+			margin-top:40px;
+			text-align: center;
+			font-family: 'Press Start 2P', cursive;
+			font-size: 250%;
+			color: #fff;
+			text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 0px #777, 0px 4px 0px #666, 0px 5px 0px #555, 0px 6px 0px #444, 0px 7px 0px #333, 0px 8px 7px #001135;
+		}
+		#what{
+			margin-top:60px;
+			margin-left:40px;
+			text-align: left;
+			font-family: 'Press Start 2P', cursive;
+			color: #fff;
+			text-shadow: 0px 1px 0px #999, 0px 2px 0px #888, 0px 3px 0px #777, 0px 4px 0px #666, 0px 5px 0px #555, 0px 6px 0px #444, 0px 7px 0px #333, 0px 8px 7px #001135;
+		}
+		input[type="radio"] {
+			
+    		display:none;
+		}
+
+		input[type="radio"] + label {
+		    color:#f2f2f2;
+		    padding: 14px 20px;
+		    margin: 8px 8px;
+		    font-family:'Press Start 2P', cursive;
+		}
+		
+		#selectQuery{
+			padding: 0px 20px;
+		    margin: 8px 8px;
+		    font-family:'Press Start 2P', cursive;
+		    color: red;
+		}
+		
+		input[type="radio"] + label span {
+		    display:inline-block;
+		    width:19px;
+		    height:19px;
+		    margin:-2px 10px 0 0;
+		    vertical-align:middle;
+		    background:url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/check_radio_sheet.png) -38px top no-repeat;
+		    cursor:pointer;
+		}
+		
+		input[type="radio"]:checked + label span {
+		    background:url(https://s3-us-west-2.amazonaws.com/s.cdpn.io/210284/check_radio_sheet.png) -57px top no-repeat;
+		}
+		
+			#selectCategory{
+				visibility: hidden;
+			}
+		</style>
+		<link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+	</head>
+	<body style="background-color:#FFFFFF;margin:0%;padding:0%;" scroll="yes">
+		<div id="wrog_browser"></div>
+		<h1 id="title">VIRTUAL MUSEUM</h1>
+		<h1 id="subtitle">GENERATOR</h1>
+		<h3 id="what">Where do you get the images?</h3>
+		<br><br>
+		<input type="radio" id="r1" name="rr" value = "1" onclick="showNumTxt()" checked="checked"/>
+	    <label for="r1"><span></span>Google Images</label>
+	    <input type="radio" id="r2" name="rr" value = "2" onclick="showCat()"/>
+	    <label for="r2"><span></span>Commons Wikimedia (collections)</label>
+	    <input type="radio" id="r3" name="rr" value = "3" onclick="showNumTxt()"/>
+	    <label for="r3"><span></span>Europeana</label>
+	    <div id="selectQuery"></div>
+	    <br><br>
+	    <div id="selectCategory">
+	    </div>
+	    <div id="parNum">
+		<input type="text" id="param" placeholder="Enter artist name">&nbsp;&nbsp;&nbsp;<select id="numero"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="25">25</option><option value="30">30</option></select>
+		</div>
+		<br><br>
+		<button onclick="start()">Start XVR Engine</button>
+		<script language="VBScript">Sub Document_onKeyPress()	if(window.event.keyCode=27) then		window.close()	End IfEnd Sub</script>
+	</body>
+	<script type="text/javascript">
+	function start(){
+			var r1 = document.getElementById("r1").checked;
+			var r2 = document.getElementById("r2").checked;
+			var r3 = document.getElementById("r3").checked;
+			if(r1 || r3){
+				var nome = document.getElementById('param').value;
+				var numero = document.getElementById("numero").value;
+				var patt = /\w/g;
+				var res = patt.test(nome);
+				console.log(res);
+				if(!res){
+					var nome = document.getElementById('param');
+					nome.value = '';
+					nome.placeholder = "Insert a valid artist name!";
+				}
+				else if(res && (r1 || r3)){
+					
+					//nome = nome.replace(" ","%20");
+					nome = encodeURI(nome);
+					console.log(nome);
+					param = nome+", "+numero.toString();
+					if(r1){
+						var val1 = document.getElementById("r1").value;
+						param = param+", "+val1;
+					}
+					else if(r3){
+						var val3 = document.getElementById("r3").value;
+						param = param+", "+val3;
+					}
+					console.log(param);
+					document.body.innerHTML ='<object id="__xvr__obj" classid="CLSID:5D589287-1496-4223-AE64-65FA078B5EAB" type="application/x-oleobject" codebase="http://client.vrmedia.it/XVRPlayer.cab#Version=1,0,0,1000" width="100%" height="100%"><param name="ScriptName" value="testMuseoVirtuale.s3d.bin" /><param name="EngineVersion" value="0155" /><param name="BackgroundColor" value="#000000" /><param name="UserParam" value = "'+param+'"/></object>';
+												  
+					
+				}			
+			}
+			else{
+					var categ = document.getElementById("categ");
+					var num = document.getElementById("numero").value;
+					var val2 = document.getElementById("r2").value;
+					var selected = categ.options[categ.selectedIndex].value;
+					var param = "";
+					param = selected+", "+num.toString()+", "+val2.toString();
+					document.body.innerHTML ='<object id="__xvr__obj" classid="CLSID:5D589287-1496-4223-AE64-65FA078B5EAB" type="application/x-oleobject" codebase="http://client.vrmedia.it/XVRPlayer.cab#Version=1,0,0,1000" width="100%" height="100%"><param name="ScriptName" value="testMuseoVirtuale.s3d.bin" /><param name="EngineVersion" value="0155" /><param name="BackgroundColor" value="#000000" /><param name="UserParam" value = "'+param+'"/></object>';
+					console.log(param);
+				}
+			
+		}
+		
+		function showNumTxt(){
+			var par = document.getElementById("param");
+			var cat = document.getElementById("selectCategory");
+			cat.style.visibility = "hidden";
+			par.style.visibility = "visible";
+		}
+		
+		function showCat(){
+			var par = document.getElementById("param");
+			var cat = document.getElementById("selectCategory");
+			cat.style.visibility = "visible";
+			par.style.visibility = "hidden";
+		}
+		
+		function addWrongBrowser(text, ref) { 
+			var xvrObj = "<div> Install <a href=" + ref + ">IE TAB</a> " + text + ".</div>"; 
+			document.getElementById('wrog_browser').innerHTML = xvrObj; 
+		}
+		var xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+		xmlDoc.async = false;
+		xmlDoc.load("catmember.xml");
+		var x = xmlDoc.getElementsByTagName('cat');
+		var s = document.getElementById("selectCategory");
+		var sel = "<select id='categ'>";
+		for(var i = 0; i<x.length;i++){
+			var xAtt = x[i].getAttribute("value");
+			var xVal = x[i].text;
+			sel = sel+"<option value="+xAtt+">"+xVal+"</option>"	
+		}
+		sel = sel+"</select>"
+		s.innerHTML =sel;
+		
+		(function() {
+			var is_firefox = navigator.userAgent.toString().toLowerCase().indexOf("firefox") != -1;
+			var is_chrome = navigator.userAgent.toLowerCase().indexOf("chrome") != -1;
+			if (is_firefox) {
+				addWrongBrowser("for Firefox", "http://software-files-a.cnet.com/s/software/13/33/30/64/ie_tab-4.0.20130422-fx-windows.xpi?lop=link&amp;ptype=3001&amp;ontid=11745&amp;siteId=4&amp;edId=3&amp;spi=ec96595b072f017cf2d587435dee3e5e&amp;pid=13333064&amp;psid=10470729&amp;token=1389378787_0bf57634a2f5678e90b599dd2577700f&amp;fileName=ie_tab-4.0.20130422-fx-windows.xpi");
+			} 
+			else if (is_chrome) {
+				addWrongBrowser("for Chrome", "https://chrome.google.com/webstore/detail/ie-tab/hehijbfgiekmjfkfjpbkbammjbdenadd")
+			}
+		})
+		();
+	</script>
+</html>

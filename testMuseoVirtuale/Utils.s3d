@@ -1,0 +1,1893 @@
+var std_utils_mupressed = false;
+var dinstance_multiplier = 4.2;
+// ******************************************************************************************************************************************
+//
+// 		MarcelloUtils.s3d
+//		
+//		A collection of utility functions for use in XVR
+//
+//		by Marcello Carrozzino, marcello 'AT' sssup.it
+//
+//		Released 31/8/2006
+//
+//      ---------------------------------------------------------------------------------------
+//
+//		Includes:
+//
+//		KeyStatus(keycode) 			- returns true if the key specified in 'keycode' has changed status from unpressed to pressed
+//
+//      DebugBox class     			- allows to display text information (for instance, variable values) on screen, in a customizable box
+//
+//		Selection(ob,mode,compID)   - return true if the mouse is currently over the object (obj or character) 'ob', depending on the value specified in 'mode': 
+//									  mode = SEL_PASS	-	true if the mouse is over the object
+//									  mode = SEL_PICK	-	true if the mouse is over the object and the left button is pressed
+//									  mode = SEL_RPICK	-	true if the mouse is over the object and the right button is pressed
+//									  mode = SEL_MOVE	-	true if the mouse is over the object and the left button is pressed, additionally moving the mouse
+//															will result in dragging the object
+//									  Moreover, it returns the character component (or mesh subset) currently selected in 'compID'
+//
+//		MoveCameraTo(dest)			- moves smoothly the camera position to 'dest' with the speed specified in the constant CAMERA_SPEED. 
+//									  Returns true when 'dest' is reached.
+//
+//		MoveCameraTarget(dest)		- moves smoothly the camera target to 'dest' with the speed specified in the constant CAMERA_SPEED. 
+//
+//									  Returns true when 'dest' is reached.
+//      MoveCameraAndTarget			- Moves camera to 'cdest' and camera target to 'tdest' in 'nframes' frames
+//		(cdest,tdest,nframes)
+//
+//		ProgressBar class			- allows to display a fully customizable progress bar
+//
+//		ToolTip
+//      (s_text, rev, bkg, fgd)		- Draws a tooltip at the mouse coordinates, with the text specified in 's_text'. If 'rev' = true, the tooltip extends
+//									  to the left, otherwise to the right. Background and text colors may be specified in 'bkg' and 'fgd'
+// 		qsort 				
+//		(vec, fpos, lpos, ind)		- Sorts the vector 'vec', starting from the initial position 'fpos' to the ending position 'lpos'. The result is stored
+//									  in the vector 'ind' which contains the ordered indices (vec[ind[fpos]] is the first element of the ordered vector, etc.
+//
+// ******************************************************************************************************************************************
+
+
+#define SEL_PASS 	0
+#define SEL_PICK 	1
+#define SEL_MOVE 	2
+#define SEL_RPICK 	3
+#define SEL_L_UP 	4
+#define SEL_INT_P	5
+
+#define CAMERA_SPEED 0.95
+#define CAMERA_DIST  0.005
+
+#define SPLASH_SIZE 0.3
+
+#define MOUSELEFT 0
+#define MOUSERIGHT 1
+#define MOUSEMIDDLE 2
+
+extern function DefaultDir;
+//var std_utiles_mupressed = false;
+
+//----------------------------------------------------------------------
+function MouseUp(button)
+//----------------------------------------------------------------------
+{
+	
+	var m = false;
+	switch (button) 
+	{
+		case MOUSELEFT:
+			m = mouse.ButtonL;
+		break;
+		case MOUSERIGHT:
+			m = mouse.ButtonR;
+		break;
+		case MOUSEMIDDLE:
+			m = mouse.ButtonR;
+	}
+	// trace(mupressed, m, button);
+	if (!std_utils_mupressed && m)
+	{
+		std_utils_mupressed = true;
+	} 
+	else if (std_utils_mupressed && !m)
+	{
+		std_utils_mupressed = false;
+		
+		return true;
+	}
+	return false;
+}
+
+
+//----------------------------------------------------------------------
+function KeyStatus(keycode)
+//----------------------------------------------------------------------
+{
+	if (valtype(keycode) == "S")
+	{
+		keycode = asc(keycode);
+	}
+		
+	static var keys_stati = vector(255);
+	if (KeyPressed(keycode))
+	{	
+		if (keys_stati[keycode] == 0.0)
+		{
+			keys_stati[keycode] = 1.0;
+			return true;
+			
+		}
+	}
+	else
+	{
+		keys_stati[keycode] = 0.0;
+		return false;
+	}
+	return false;		
+}
+
+//----------------------------------------------------------------------
+function JoyStatus(joycode)
+//----------------------------------------------------------------------
+{	
+	static var joy_stati = vector(10);
+	
+	var retjoy;
+	if (joycode == 1) retjoy = Joystick.Button1;
+	else if (joycode == 2) retjoy = Joystick.Button2;
+	else if (joycode == 3) retjoy = Joystick.Button3;
+	else if (joycode == 4) retjoy = Joystick.Button4;
+	else if (joycode == 5) retjoy = Joystick.Button5;
+	else if (joycode == 6) retjoy = Joystick.Button6;
+	else if (joycode == 7) retjoy = Joystick.Button7;
+	else if (joycode == 8) retjoy = Joystick.Button8;
+	else if (joycode == 9) retjoy = Joystick.Button9;
+	else if (joycode == 10) retjoy = Joystick.Button10;
+	
+	if (retjoy)
+	{	
+		if (joy_stati[joycode] == 0.0)
+		{
+			joy_stati[joycode] = 1.0;
+			return true;
+			
+		}
+	}
+	else
+	{
+		joy_stati[joycode] = 0.0;
+		return false;
+	}
+	return false;		
+}
+
+//----------------------------------------------------------------------
+class DebugBox
+//----------------------------------------------------------------------
+{
+	var items_array;
+	var last_item;
+	var startx;
+	var starty;
+	var linespacing;
+	var font;
+	var fontsize;
+	var updirection;
+	var xsize;
+	var margin_left;
+	var margin_bottom;	
+	var color;
+	var fill_color;
+	
+	Initialize();
+	SetItem(t,v);
+	SetPosition(x,y);
+	Draw(vx,vy);
+	SetColor(col);
+	SetFillColor(fill);
+	SetMargins(mleft, mbottom);
+	SetFont(newfont,newdim);
+};
+
+function DebugBox::Initialize()
+{
+	items_array = array(0);
+	last_item = 0;
+	xsize = 0;
+	updirection = false;
+	linespacing = 1;
+	font = "Arial";
+	fontsize = 14;
+	margin_left   = 4;
+	margin_bottom = 4;
+	color = [0.0,0.0,0.0,1.0];
+	fill_color = [1.0, 1.0, 0.5, 0.5];
+}
+
+function DebugBox::SetFont(newfont,newdim)
+{
+	font = newfont;
+	if (newdim != void)
+		fontsize = newdim;
+}
+
+
+function DebugBox::SetColor(col)
+{
+	color = col;
+}
+
+function DebugBox::SetFillColor(col)
+{
+	fill_color = col;
+}
+
+function DebugBox::SetMargins(mleft,mbottom)
+{
+	margin_left = mleft;
+	margin_bottom = mbottom;
+}
+
+function DebugBox::SetPosition(x,y)
+{
+	startx = x;
+	starty = y;
+}
+
+function DebugBox::SetItem(testo,value)
+{	
+	var testo_item;
+	if (value != void)
+	 	testo_item = sprintf("%s: %.3f", testo, value);
+	else
+		testo_item = sprintf("%s", testo);
+	Aadd(items_array, testo_item);
+	var lun = len(testo_item);
+	if (lun > xsize) xsize = lun;
+	last_item ++;
+}
+
+function DebugBox::Draw(viewportx, viewporty)
+{
+	
+	ConsoleFont(font,fontsize);
+	
+	var vspace;
+	if (viewporty == -1)
+		vspace = linespacing * 0.02;
+	else
+	{	
+		vspace = linespacing * fontsize / viewporty;
+	}
+	var i,j;
+		
+	var startbox_x = startx-margin_left/viewportx;
+	var startbox_y = vspace*last_item + starty;	
+	var dim_x = 0.75*(xsize*fontsize)/viewportx;
+	var dim_y = startbox_y-starty+margin_bottom/viewporty ;
+	
+	ConsoleColor(fill_color[0],fill_color[1],fill_color[2],fill_color[3]);
+	ConsoleFilledRect(startbox_x,startbox_y, dim_x , dim_y);
+	ConsoleColor(color[0],color[1],color[2],color[3]);
+	ConsoleRect(startbox_x,startbox_y, dim_x , dim_y);
+	
+	for (i=0;i<last_item;i++)
+	{
+		if (!updirection)
+			j = last_item - i - 1;
+		else 
+			j = i;
+			
+		ConsoleText(startx,starty+vspace*i,items_array[j]);	
+	}
+	
+	items_array = array(0);
+	last_item = 0;
+}
+//-------------------------------------------
+function Matrix3_to_4(mat3)
+//-------------------------------------------
+{
+	var mat4 = vector(16);
+	mat4[0] = mat3[0]; 	 	mat4[1] = mat3[1];			mat4[2] = mat3[2];		mat4[3]  = 0;	
+	mat4[4] = mat3[3]; 	 	mat4[5] = mat3[4];			mat4[6] = mat3[5];		mat4[7]  = 0;
+	mat4[8] = mat3[6]; 	 	mat4[9] = mat3[7];			mat4[10] = mat3[8];		mat4[11] = 0;
+	mat4[12] = 0; 	 		mat4[13] = 0;				mat4[14] = 0;			mat4[15] = 1;
+	return mat4;
+}
+
+
+//-------------------------------------------
+function Selection(vr_obj, mode, compID)
+//-------------------------------------------
+{  
+	static var taken_vr_obj = false; 
+	  
+	var retval; 
+	var viewport = array(4);
+	var winx,winy;
+	
+	static var p0 = [0.0,0.0,0.0];
+	static var p1 = [0.0,0.0,0.0];
+	var pInt = [0.0,0.0,0.0];
+	var nrml = [0.0,0.0,0.0];
+	var n_tr; 
+	
+	viewport = glget(GL_VIEWPORT);
+	 
+	winx = Mouse.X;      //x*1.0f/width;
+	winy = viewport[3] - 1 - Mouse.Y; //1.0f - y*1.0f/height;
+	
+	var vec0 = [0.0,0.0,0.0];
+	var vec1 = [0.0,0.0,0.0];
+	vec0[0] = winx;
+	vec0[1] = winy;
+	vec0[2] = 0.0;
+	vec1[0] = winx;
+	vec1[1] = winy;
+	vec1[2] = 1.0;
+	 
+	p0 = gluUnProject(vec0);
+	p1 = gluUnProject(vec1);
+	 
+	// collision detection
+	retval = vr_obj.IsColliding(p0, p1, &pInt, &nrml, &n_tr, &compID);
+
+ 	if (mode == SEL_PASS)
+  		return retval;
+  		
+  	if (retval && compID == -1 && vr_obj.GetMesh() !=  VOID)
+  		compID = vr_obj.GetMesh().GetSubSetFromTriIndex(n_Tr); 
+
+
+	// pick and move objects
+ 	if ((mode == SEL_PICK || mode == SEL_MOVE || mode == SEL_INT_P) && !Mouse.ButtonL)
+ 	{
+  		taken_vr_obj = Mouse.ButtonL;
+  		retval = false;
+ 	}
+ 
+ 	if (mode == SEL_RPICK && !Mouse.ButtonR)
+  		retval = false;
+  
+	 // move   
+ 	if ((retval || taken_vr_obj) && mode == SEL_MOVE)
+ 	{
+ 		taken_vr_obj = taken_vr_obj = Mouse.ButtonL; //(!taken_vr_obj && Mouse.DoubleL) ? true : (taken_vr_obj && Mouse.DoubleL) ? false : taken_vr_obj;
+
+		retval = taken_vr_obj;
+		p0 = gluProject(vr_obj.GetPosition());		//	p0:   punto di intersezione in screen coordinates		
+		vec0[2] = p0[2];			//  vec0: mouse pointer in screen coordinates con z = quella di p0	
+		p0 = gluUnProject(vec0);	//  p0:	  vec0 in world coordinates	
+		
+		vr_obj.SetPosition(p0);
+ 		
+ 	}
+ 
+ 	if (mode == SEL_INT_P)
+ 		return {retval, pInt};
+ 
+ 	return retVal; // return pInt;
+}
+
+//-------------------------------------------
+function MoveCameraTo(dest, speed)
+//-------------------------------------------
+{	
+	var temp;
+	var dist;
+	// var speed=CAMERA_SPEED;	
+	temp = CameraGetPosition();	
+	temp = speed * temp + (1.0-speed) * dest;
+	CameraSetPosition(temp);	
+	
+	dist = ((temp[0]-dest[0])^2)+((temp[1]-dest[1])^2)+((temp[2]-dest[2])^2);
+	
+	if (dist < CAMERA_DIST) 
+	{
+		return true;		
+	}
+	else return false;
+}
+
+
+//-------------------------------------------
+function MoveCameraTarget(dest, speed)
+//-------------------------------------------
+{	
+	var temp;
+	var dist;
+	// var speed=CAMERA_SPEED;	
+	temp=CameraGetTarget();	
+	temp=speed*temp+(1.0-speed)*dest;
+	var temp2=temp;	
+	CameraSetTarget(temp);
+	
+	dist = ((temp[0]-dest[0])^2)+((temp[1]-dest[1])^2)+((temp[2]-dest[2])^2);
+	
+	if (dist < CAMERA_DIST) 
+	{
+		return true;		
+	}
+	else return false;
+}
+
+
+//-------------------------------------------
+function MoveCameraAndTarget(cdest,tdest,frames)
+//-------------------------------------------
+{	
+	var temp;
+	static var cdist,tdist;
+	static var start = true;
+	static var nframes = 1;
+	static var cvm,tvm;
+	static var cdir,tdir;
+	
+	var _up = CameraGetCurrent().GetYAxis();
+	
+	if (start == true)
+	{
+		nframes = 0;
+		var sqdi;
+		
+		temp = CameraGetPosition();			
+		sqdi = ((temp[0]-cdest[0])^2)+((temp[1]-cdest[1])^2)+((temp[2]-cdest[2])^2);			
+		cdist = sqrt(sqdi);				
+		cdir = norm(cdest-temp);		
+		cvm = cdist/frames;				
+						
+		temp = CameraGetTarget();
+		sqdi = ((temp[0]-tdest[0])^2)+((temp[1]-tdest[1])^2)+((temp[2]-tdest[2])^2);		
+		tdist = sqrt(sqdi);
+		tdir = norm(tdest-temp);
+		tvm = tdist/frames;				
+	}
+		
+	var cspeed, tspeed;	
+	var coeff = (frames+1)/2;
+	
+	if (nframes < frames/2)
+	{
+		cspeed = nframes*cvm/coeff;
+		tspeed = nframes*tvm/coeff;
+	}
+	else
+	{
+		cspeed = (frames-nframes)*cvm/coeff;	
+		tspeed = (frames-nframes)*tvm/coeff;	
+	}
+	
+	var cv = (2*cspeed);
+	var tv = (2*tspeed);
+		
+	temp=CameraGetPosition();
+	if (cdist > 0.001)		
+		temp=temp + cv * cdir;
+	CameraSetPosition(temp);
+	
+	temp=CameraGetTarget();
+	if (tdist > 0.001)
+		temp=temp + tv * tdir;
+	CameraSetTarget(temp);
+	
+
+	nframes ++;
+	if (nframes == frames || cdist < 0.001)
+	{			
+		start = true;
+	}
+	else
+		start = false;
+		
+	CameraGetCurrent().SetUpVector(_up);
+		
+	return start;
+}
+
+//----------------------------------------------------------------------
+class ProgressBar
+//----------------------------------------------------------------------
+{
+	// progress: 	expressed in %
+	// s_text:   	string to display
+	// t_index:  	index of the texture array (if -1 no texture is present)
+	// tex_splash:	array of splash textures
+
+	var progress;
+	var s_text;
+	var a_splash_textures;
+	var n_textures;
+	var cur_index;
+	var bkg_color;	
+	var fgd_color;
+	var m_bar_top;
+	var m_bar_bottom;
+	var m_bar_left;
+	var m_bar_right;
+	var m_pic_top;
+	var m_pic_left;
+	var m_pic_sizex;
+	var m_pic_sizey;
+	var m_stereo;
+
+		
+	SetProgress(prf);
+	InitTextures(tex_array);
+	SetText(txt);
+	SetTextureIndex(ind);
+	Draw(pr,txt,ind,col,font);
+	SetStereoOn();
+	
+	// PRIVATE
+	DrawTexture(delta);
+	DrawBar(prog, delta);
+};
+
+function ProgressBar::ProgressBar()
+//-------------------------------------------
+{
+	progress 		= 0;
+	s_text   		= "";
+	n_textures		= 0;
+	a_splash_textures = array(0);
+	cur_index       = -1;
+	bkg_color   	= [0.0, 0.0, 0.0];
+	fgd_color   	= [1.0, 1.0, 1.0];
+	m_bar_top		=  0.01;
+	m_bar_bottom	= -0.01;
+	m_bar_left		= -0.5;
+	m_bar_right		=  0.5;
+	m_pic_top		=  0.3;
+	m_pic_left		= -0.3;
+	m_pic_sizex		=  0.6;
+	m_pic_sizey		=  0.6;
+	m_stereo 		=  false;
+}
+
+function ProgressBar::SetStereoOn()
+//-------------------------------------------
+{
+	m_stereo    = true;
+	m_bar_left  = (m_bar_left-1)/2;
+	m_bar_right = (m_bar_right-1)/2;
+	m_pic_left  = (m_pic_left-1)/2;
+	m_pic_sizex	=  m_pic_sizex / 2;
+}
+
+function ProgressBar::InitTextures(tex_array)
+//-------------------------------------------
+{
+	a_splash_textures = tex_array;
+	n_textures        = len(a_splash_textures);
+}
+
+function ProgressBar::SetProgress(pr)
+//-------------------------------------------
+{
+	progress = pr;
+}
+
+function ProgressBar::SetText(txt)
+//-------------------------------------------
+{
+	s_text = txt;
+}
+
+function ProgressBar::SetTextureIndex(ind)
+//-------------------------------------------
+{
+	cur_index = ind;
+}
+
+function ProgressBar::DrawTexture(d)
+// PRIVATE -------------------------------------------
+{
+	if (d == void)
+		d = 0;
+	glTexcoord(1,0);
+	glVertex( d+ m_pic_left+m_pic_sizex,  m_pic_top, 0);
+	glTexcoord(0,0);
+	glVertex( d+ m_pic_left,  m_pic_top, 0);
+	glTexcoord(0,1);
+	glVertex( d+ m_pic_left,  m_pic_top-m_pic_sizey, 0);
+	glTexcoord(1,1);
+	glVertex( d+ m_pic_left+m_pic_sizex,  m_pic_top-m_pic_sizey, 0);
+}
+
+function ProgressBar::DrawBar(p,d)
+// PRIVATE -------------------------------------------
+{
+	if (d == void)
+		d = 0;
+
+	glVertex(d+ m_bar_left, 	m_bar_bottom, 0.0);
+	glVertex(d+ m_bar_left + p, m_bar_bottom, 0.0);
+	glVertex(d+ m_bar_left + p, m_bar_top, 0.0);
+	glVertex(d+ m_bar_left, 	m_bar_top, 0.0);
+}	
+
+	
+function ProgressBar::Draw(pr, txt, ind, col, font)
+//-------------------------------------------
+{
+	if ( valtype(pr) !="" ) progress  = pr;
+	if ( valtype(txt)!="" ) s_text    = txt;
+	if ( valtype(ind)!="" ) cur_index = ind;
+		
+	var p = progress/100.0;
+	
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+			
+	glClearColor(0.0,0.0,0.0,1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	
+	glDisable(GL_LIGHTING);
+		
+	if(cur_index != -1 && n_textures > 0)
+	{		
+		SetActiveTexture(a_splash_textures[cur_index]);
+		glEnable(GL_TEXTURE_2D);
+		glBegin(GL_QUADS);	
+			glColor(1.0,1.0,1.0);//	++ -+ -- +-
+			DrawTexture();
+			if (m_stereo)			
+				DrawTexture(1);						
+		glEnd();
+		glDisable(GL_TEXTURE_2D);
+	}
+	
+	glTranslate(0,-0.53,0);
+		
+	if (m_stereo)
+		p = p/2;
+											
+	if (progress>=0)
+	{
+		//Barra
+		if (progress>=100.0)
+		{
+			glColor(0.6, 1.0, 0.0); 
+			glBegin(GL_QUADS);		//Barra verde finita			
+				DrawBar(1);
+				if (m_stereo)			
+					DrawBar(0.5,1);	
+			glEnd();
+		}
+		else
+		{		
+			if (m_stereo)
+				glColor(1.0-p*0.8,p,0.0,1.0); 				
+			else
+				glColor(1.0-p*0.4,p,0.0,1.0); 
+								
+			glBegin(GL_QUADS);		//Barra cangiante
+				DrawBar(p);
+				if (m_stereo)			
+					DrawBar(p,1);	
+			glEnd();
+		}		
+	}
+	
+	glEnable(GL_LIGHTING);
+	
+	glPopMatrix();
+	glLoadIdentity();
+	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	
+	glMatrixMode(GL_MODELVIEW);
+	if (col != Void) ConsoleColor(col);
+	if (font != Void) ConsoleFont(font[0], font[1]);
+	if (m_stereo)
+	{
+		ConsoleText(0.125, 0.2, s_text);	
+		ConsoleText(0.625, 0.2, s_text);
+	}
+	else	
+		ConsoleText(0.25, 0.2, s_text);	
+		
+	SwapBuffers();
+}
+
+
+/*
+//-------------------------------------------
+function ToolTip(s_text, reverse, center, bkg_color, fgd_color, font_name, up, label, bill, position)
+//-------------------------------------------
+{
+	if (label != Void && label)
+	{
+		if (bill != Void && position != Void && position != [0,0,0])
+		{
+			if (bill < LABEL_MANAGER.Length())
+			{
+				var cpos = CameraGetPosition();
+				var d = STEREO_DEVICE == STEREO_ACTIVE ? position - (cpos - CameraGetDirection() * 2.0) : position - cpos;
+				d = norm(d); //[position.X,position.Y,d.Z]; 
+				var dy = up ? LABEL_MANAGER.elements[bill].size.Y : 0; 
+				var p = STEREO_DEVICE == STEREO_CAVE ? [0, dy, 0] + position : STEREO_DEVICE == STEREO_ACTIVE ? [0, dy, 0] + cpos - CameraGetDirection() * 2.0 + d * dinstance_multiplier: [0, dy, 0] + cpos + d * dinstance_multiplier; // position;
+				
+				LABEL_MANAGER.elements[bill].SetPosition(p);
+				glDisable(GL_DEPTH_TEST);
+				glEnable(GL_BLEND);
+				LABEL_MANAGER.elements[bill].Draw();
+				glEnable(GL_DEPTH_TEST);
+			}
+			return;
+		}
+	}
+	if (STEREO_DEVICE != STEREO_ACTIVE && STEREO_DEVICE != STEREO_NONE) return;
+	
+	#define STRETCH_X 0.75
+	var mx = 0.0;
+	var my = 0.0;
+	if (up == Void) up = true;
+	var viewport = glget(GL_VIEWPORT);
+	
+	if (valtype(reverse)=="" )
+		reverse = false;	
+	
+	if (valtype(center)=="" )
+		center = false;
+	
+	if (valtype(bkg_color) == "")
+		bkg_color = [1.0, 1.0, 0.0, 0.5];
+	
+	if (valtype(fgd_color) == "" )
+		fgd_color = [0.0, 0.0, 0.0, 1.0];	
+	
+	glColor(1.0,1.0,1.0,0.1);
+	
+	var fontsize = 12;
+	var pixelx = 1.0/viewport[2];
+	var pixely = 1.0/viewport[3];				
+	var dim = len(s_text)*pixelx*fontsize*STRETCH_X;		
+	var ydim = (fontsize+4)*pixely;
+	
+	mx = (Mouse.x/Viewport[2]);
+	if (reverse)
+		mx = mx-dim;			
+	my = (Mouse.y/Viewport[3]);
+	
+	if (font_name == Void)
+		font_name = "Arial grassetto"; 
+	ConsoleFont(font_name, fontsize);
+	
+	ConsoleColor( bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+	var tx = mx; //- dim / 2;
+	var ty = up ? 1 - my + ydim : 1 - my;
+	// if (tx > 0)
+	if (center)
+		ConsoleFilledRect(tx - dim / 2, ty, dim, ydim);
+	else
+		ConsoleFilledRect(tx, ty, dim, ydim);
+	// else
+	// 	ConsoleFilledRect(mx, ty, dim, ydim);
+	
+	ConsoleColor(fgd_color[0], fgd_color[1], fgd_color[2], fgd_color[3]);
+	
+	ty = up ? 0.997 - my + ydim / 3 : 0.997 - my - ydim / 3.0 * 2.0; 
+	// if (tx > 0)
+	// 	ConsoleText(tx + pixelx * 4, ty, s_text);	//-my+margin
+	// else
+	if (center) ConsoleText(mx + pixelx * 4 - dim / 2, ty, s_text);
+	else ConsoleText(mx + pixelx * 4, ty, s_text);
+}
+*/
+
+
+function swap (vett, i, j)
+{
+	var v = vett;
+	var temp = v[i];
+	v[i] = v[j];
+	v[j] = temp;
+	return v;
+}
+
+//-------------------------------------------
+function qsort (vettore, prim, ult, indices)
+//-------------------------------------------
+{
+	var last,v,i;
+	var vind = indices;
+	
+	if (prim >= ult)
+		return vettore;
+		
+	var ind =  (prim+ult)/2;	
+	v = swap (vettore, prim, ind);
+	vind = swap (vind, prim, ind);
+	last = prim;
+	
+	for (i=prim+1;i<=ult;i++) 	
+		if (v[i] < v[prim])
+		{
+			last++;
+			v = swap (v, last, i);
+			vind = swap (vind, last,i);			
+		}
+	
+	v = swap (v,prim,last);
+	indices = swap (vind, prim, last);
+	
+	v =	qsort (v,prim,last-1,indices);
+	v =	qsort (v,last+1,ult,indices);
+	
+	return v;			
+}
+
+
+
+function DrawTexturedQuad(texture, doclear)
+//-------------------------------------------
+{	
+	var m_pic_top		=  0.9;
+	var m_pic_left		= -0.9;
+	var m_pic_sizex		=  1.8;
+	var m_pic_sizey		=  1.8;
+	
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+		
+	if (doClear)
+	{	
+		glClearColor(0.0,0.0,0.0,1.0);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	glDisable(GL_LIGHTING);
+	
+	SetActiveTexture(texture);
+	glEnable(GL_TEXTURE_2D);
+	glBegin(GL_QUADS);	
+		glColor(1.0,1.0,1.0);
+		glTexcoord(1,0);
+		glVertex(  m_pic_left+m_pic_sizex,  m_pic_top, 0);
+		glTexcoord(0,0);
+		glVertex( m_pic_left,  m_pic_top, 0);
+		glTexcoord(0,1);
+		glVertex(  m_pic_left,  m_pic_top-m_pic_sizey, 0);
+		glTexcoord(1,1);
+		glVertex(  m_pic_left+m_pic_sizex,  m_pic_top-m_pic_sizey, 0);
+	glEnd();
+	glDisable(GL_TEXTURE_2D);
+	
+	
+	glEnable(GL_LIGHTING);
+	
+	glPopMatrix();
+	glLoadIdentity();
+	
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	
+	glMatrixMode(GL_MODELVIEW);
+	
+}
+
+
+
+
+function distance (p0, p1)
+{
+	if (len(p0) == 2)
+		return ((p1.x - p0.x) * (p1.x - p0.x) 
+		+ (p1.y - p0.y) * (p1.y - p0.y));
+	else
+	return ((p1.x - p0.x) * (p1.x - p0.x) 
+		+ (p1.y - p0.y) * (p1.y - p0.y) 
+		+ (p1.z - p0.z) * (p1.z - p0.z)
+	);
+}
+
+
+function EnableTextureGLClamp()
+{
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP);
+   	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP);
+}
+
+
+function SetActiveTextureClamp(texture)
+{
+	SetActiveTexture(texture);
+	EnableTextureGLClamp();
+}
+
+
+function TruncateString(value, index)
+{
+	if (index > len(value))
+		return value;
+		
+	var res = "";
+	for (var i = 0; i < index; i++)
+		res += value[i];
+	return res;
+
+
+}
+
+
+// var currentCursor = VR_CUR_ARROW;
+
+function ConsoleTextABS(x, y, txt)
+{
+	var viewportsize = glGet(GL_VIEWPORT);
+	var _x = viewportsize[2];
+	var _y = viewportsize[3];
+	
+	ConsoleText(x / _x, 1 - y / _y, txt);
+}
+
+/* Function that returns the max of two numbers
+ * 
+ * x	-	the first number
+ * y 	-	the second number
+ * 
+ * Returns: max(x, y)  
+ * 
+ */
+function Max(x, y)
+{
+	return x > y ? x : y;
+}
+
+/* Function that returns sign of a number
+ * 
+ * x	-	the number
+ * y 	-	the second number
+ * 
+ * Returns: 0 if x == 0, 1 if x > 0 and -1 if x < 0  
+ * 
+ */
+function Sign(x)
+{
+	return x == 0 ? 0 : x > 0 ? 1 : -1;
+}
+
+/* Function that returns the min of two numbers
+ * 
+ * x	-	the first number
+ * y 	-	the second number
+ * 
+ * Returns: min(x, y)  
+ * 
+ */
+function Min(x, y)
+{
+	return x < y ? x : y;
+}
+
+
+function GetCenterBoundingBox(bb)
+{
+	if (len(bb) != 6)
+		return Void;
+		
+	var centerbb = vector(3);
+	for (var i = 0; i < len(centerbb); i++)
+		centerbb[i] = (bb[i] + bb[i + 3]) / 2.0;
+	return centerbb;
+}
+
+/* This function implements MouseLeftUp event
+ * 
+ * Returns : true if register mouse up event, false otherwise
+ */
+function MouseLeftUp()
+{
+	static var mupressed = false;
+	
+	if (!mupressed && mouse.buttonL)
+	{
+		mupressed = true;
+	}
+	else if (mupressed && !mouse.buttonL)
+	{
+		mupressed = false;
+		return true;		
+	}
+	
+	return false;
+}
+
+/* This function implements the first frame with MouseDown event
+ * 
+ * button 		-	the button for mouse event
+ * 
+ * Returns : true if register mouse down event, false otherwise
+ */
+function MouseDown(button)
+{
+	// init
+	static var mdpressed = false;
+
+	var m = false;
+	switch (button) 
+	{
+		case MOUSELEFT:
+			m = mouse.ButtonL;
+		break;
+		case MOUSERIGHT:
+			m = mouse.ButtonR;
+		break;
+		case MOUSEMIDDLE:
+			m = mouse.ButtonR;
+	}
+
+	if (!mdpressed && m)
+	{
+		mdpressed = true;
+		return true;
+	}
+	else 
+	if (mdpressed && !m)
+	{
+		mdpressed = false;
+	}
+	
+	return false;
+}
+
+
+
+/* Function that replace a substring with an other substring on a string.
+ * 
+ * src	- 	the input string 	 
+ * old	-	the substring to replace
+ * new	-	the substring with which replace
+ * 
+ * Returns: the new string
+ */
+function str_replace(src, old, new)
+{
+
+	var asrc = Split(src, old);
+	var result = ""; // path[0] + new;
+	for (var i = 0; i < len(asrc) - 1; i++)
+		result += (asrc[i] + new);
+	
+	result += asrc[len(asrc) - 1];
+
+	return result;
+}
+
+/* Function that returns true if the string contains the substring passed by param, false otherwise
+ * 
+ * src		- 	the string to control 	 
+ * substr	-	the substring to search in src string
+ * 
+ * Returns: true if src contains substr, false otherwise
+ */
+function str_contains(src, substr)
+{
+	var t = Split(src, substr);
+	return len(t) > 1;
+}
+
+function str_cut(src, i)
+{
+	var t1 = right(src, i);
+	var t0 = left(src, len(src) - i);
+	return {t0, t1};
+}
+
+
+/* Function that gets the path from an url, passed by param. 
+ * It's remove the filename of the name of the last folder
+ * 
+ * url	-	the url
+ * 
+ * Returns: the path
+ */
+function get_path(url)
+{
+	var elements = Split(url, "/");
+	var last = elements[len(elements) - 1];
+	return left(url, len(url) - len(last));
+	// return result;
+
+}
+
+/* Function that gets the filename from a path
+ * 
+ * url	-	the url
+ * 
+ * Returns: the filename, if present
+ */
+function get_filename(url)
+{
+	var elements = Split(url, "/");
+	return elements[len(elements) - 1];
+}
+
+// #define SEL_PASS  0
+// #define SEL_PICK  1
+// #define SEL_MOVE  2
+// #define SEL_RPICK  3
+
+//-------------------------------------------
+//function Selection(vr_obj, mode, compID)
+////-------------------------------------------
+//{
+//		
+//	static var taken_vr_obj = false;	
+//		
+//	var retval;	
+//	var viewport = array(4);
+//	var winx,winy;
+//
+//	static var p0 = [0.0,0.0,0.0];
+//	static var p1 = [0.0,0.0,0.0];
+//	var pInt = [0.0,0.0,0.0];
+//	var nrml = [0.0,0.0,0.0];
+//	var n_tr;	
+//
+//	viewport = glget(GL_VIEWPORT);
+//	
+//	winx = Mouse.X;						//x*1.0f/width;
+//	winy = viewport[3] - 1 - Mouse.Y;	//1.0f - y*1.0f/height;
+//
+//	var vec0 = [0.0,0.0,0.0];
+//	var vec1 = [0.0,0.0,0.0];
+//	vec0[0] = winx;
+//	vec0[1] = winy ;
+//	vec0[2] = 0.0;
+//	vec1[0] = winx;
+//	vec1[1] = winy;
+//	vec1[2] = 1.0;
+//	
+//	p0 = gluUnProject(vec0);
+//	p1 = gluUnProject(vec1);
+//	
+//	// collision detection
+//	retval = vr_obj.IsColliding(p0, p1, &pInt, &nrml, &n_tr, &compID);
+//	if (retval && compID == -1 && vr_obj.GetMesh() !=  VOID)
+//		compID = vr_obj.GetMesh().GetSubSetFromTriIndex(n_Tr); 
+//	
+//	if (mode == SEL_PASS)
+//		return retval;
+//	
+//	// pick and move objects
+//	if ((mode == SEL_PICK || mode == SEL_MOVE) && !Mouse.ButtonL)
+//	{
+//		taken_vr_obj = Mouse.ButtonL;
+//		retval = false;
+//	}
+//	
+//	if (mode == SEL_RPICK && !Mouse.ButtonR)
+//		retval = false;
+//		
+//	// move			
+//	if ((retval || taken_vr_obj) && mode == SEL_MOVE)
+//	{
+//		taken_vr_obj = Mouse.ButtonL;
+//		retval = taken_vr_obj;
+//		p0 = gluProject(vr_obj.GetPosition());		//	p0:   punto di intersezione in screen coordinates		
+//		vec0[2] = p0[2];			//  vec0: mouse pointer in screen coordinates con z = quella di p0	
+//		p0 = gluUnProject(vec0);	//  p0:	  vec0 in world coordinates	
+//		
+//		vr_obj.SetPosition(p0);
+//		
+//	}
+//	
+//	return retVal; // return pInt;
+//	
+//}
+
+
+/* This function get true if an obj is selected by mouse
+ * 
+ * vr_obj 	- 	object
+ * mode 	- 	pass, move or picking
+ * compID 	-	
+ * 
+ * Returns: the result in base of mode param
+ */
+//-------------------------------------------
+/* function Selection(vr_obj, mode, compID)
+//-------------------------------------------
+{
+		
+	var retval;	
+	var viewport = array(4);
+	var winx,winy;
+
+	static var p0 = [0.0,0.0,0.0];
+	static var p1 = [0.0,0.0,0.0];
+	var pInt = [0.0,0.0,0.0];
+	var nrml = [0.0,0.0,0.0];
+	var n_tr;	
+
+	viewport = glget(GL_VIEWPORT);
+	
+	winx = Mouse.X;						//x*1.0f/width;
+	winy = viewport[3] - 1 - Mouse.Y;	//1.0f - y*1.0f/height;
+
+	var vec0 = [0.0,0.0,0.0];
+	var vec1 = [0.0,0.0,0.0];
+	vec0[0] = winx;
+	vec0[1] = winy ;
+	vec0[2] = 0.0;
+	vec1[0] = winx;
+	vec1[1] = winy;
+	vec1[2] = 1.0;
+	
+	p0 = gluUnProject(vec0);
+	p1 = gluUnProject(vec1);
+	
+	if (vr_obj.IsColliding(p0, p1, &pInt, &nrml, &n_tr, &compID))	
+	{
+		retval = true;
+		if (compID == -1 && vr_obj.GetMesh() !=  VOID)
+			compID = vr_obj.GetMesh().GetSubSetFromTriIndex(n_Tr); 
+	}
+	else
+		retval = false;
+	
+	if (mode == SEL_PASS)
+		return retval;
+	
+	if ((mode == SEL_PICK || mode == SEL_MOVE) && !Mouse.ButtonL)
+		retval = false;
+
+				
+	if (retval && mode == SEL_MOVE)
+	{	
+		p0 = gluProject(pInt);		//	p0:   punto di intersezione in screen coordinates		
+		vec0[2] = p0[2];			//  vec0: mouse pointer in screen coordinates con z = quella di p0	
+		p0 = gluUnProject(vec0);	//  p0:	  vec0 in world coordinates	
+//		trace(p0);
+		
+		vr_obj.SetPosition(p0);
+	}
+	
+	// return pInt;
+	
+	return retVal;
+	
+}*/ 
+
+
+
+function included(x, y, p0, p1)
+{
+	var res = array(2);
+	res[0] = x;
+	res[1] = y;
+	if (len(p0) == len(p1) && len(p1) >= 2)
+	{
+		for (var i = 0; i < 2; i++)
+		{
+			var _min = min(p0[i], p1[i]);
+			var _max = max(p0[i], p1[i]);
+			// trace(i, _min, _max, v);
+			res[i] = _min < res[i] && _max > res[i]; 
+		} 
+	}
+	return res[0] && res[1];
+}
+
+
+/* Function that takes a string and convert it to an array 
+ * 
+ * src		-	 the string like this format: [a, b, ...., z] 
+ * 
+ * Returns the array if src is correct, null otherwise 
+ */
+function StringToArray(src)
+{
+	var res = null;
+	
+	var _s = Split(src, ",");
+	if (len(_s) > 0)
+		res = array(len(_s));
+	else return null;
+		
+	for (var i = 0; i < len(_s) && len(_s) > 1; i++)
+	{
+		if (i == 0)
+		{
+			var t = Split(_s[i], "[");
+			res[i] = val(t[1]);
+		}
+		else if (i == len(_s) - 1)
+		{
+			var t = Split(_s[i], "]");
+			res[i] = val(t[0]);
+		}
+		else res[i] = val(_s[i]);
+	}
+	
+	if (len(_s) == 1 && _s[0] == "")
+		return null;
+	else
+	{
+		var t = Split(_s[0], "]");
+		if (len(t) == 1)
+		{
+			var tt = Split(t[0], "[");
+			res[0] = val(tt[1]);
+			
+		}
+		else return null;
+	}
+	
+	return res;	
+}
+
+
+function StringToStringArray(src)
+{
+	var res = null;
+
+	var _s = Split(src, ",");
+	if (len(_s) > 0)
+		res = array(len(_s));
+	else return null;
+		
+	for (var i = 0; i < len(_s) && len(_s) > 1; i++)
+	{
+		if (i == 0)
+		{
+			var t = Split(_s[i], "[");
+			res[i] = t[1];
+		}
+		else if (i == len(_s) - 1)
+		{
+			var t = Split(_s[i], "]");
+			res[i] = t[0];
+		}
+		else res[i] = _s[i];
+	}
+	
+	if (len(_s) == 1 && _s[0] == "")
+		return null;
+	else 
+	if (len(_s) == 1)
+	{
+		var t = Split(_s[0], "]");
+		if (len(t) > 1)
+		{
+			var tt = Split(t[0], "[");
+			res[0] = tt[1];
+		}
+	}
+	else
+	{
+		
+		var t = Split(_s[0], "]");
+		if (len(t) == 1)
+		{
+			var tt = Split(t[0], "[");
+			res[0] = tt[1];
+			
+		}
+		else return null;
+		
+	}
+	
+	return res;	
+}
+
+
+/* Function that takes a string and convert it to a vector 
+ * 
+ * src		-	 the string like this format: [a, b, ...., z] 
+ * 
+ * Returns the vector if src is correct, null otherwise 
+ */
+ 
+function StringToVec(src)
+{
+	var res = null;
+	
+	var _s = Split(src, ",");
+	if (len(_s) > 0)
+		res = vector(len(_s));
+	else return null;
+		
+	for (var i = 0; i < len(_s) && len(_s) > 1; i++)
+	{
+		if (i == 0)
+		{
+			var t = Split(_s[i], "[");
+			res[i] = val(t[1]);
+		}
+		else if (i == len(_s) - 1)
+		{
+			var t = Split(_s[i], "]");
+			res[i] = val(t[0]);
+		}
+		else res[i] = val(_s[i]);
+	}
+	
+	if (len(_s) == 1 && _s[0] == "")
+		return null;
+	else
+	{
+		var t = Split(_s[0], "]");
+		if (len(t) == 1)
+		{
+			var tt = Split(t[0], "[");
+			res[0] = val(tt[1]);
+			
+		}
+		else return null;
+	}
+	
+	return res;	
+}
+
+function StringToBool(src)
+{
+	return src != Void ? src == "true" : false;
+}
+
+//
+//function SetMouseCursorHand()
+//{	
+//	// if (currentCursor == VR_CUR_ARROW)
+//	// {
+//	// SetCursorShape(VR_CUR_HAND);
+//	// 	currentCursor = VR_CUR_HAND;
+//	// }
+//}
+
+
+
+function Trunk(x)
+{
+	return val(str(x));
+}
+
+function RadToGrad(r)
+{
+	return (r * 180) / PI;
+}
+
+function GradToRad(g)
+{
+	return (g * PI) / 180;
+}
+
+
+function GetAngle(pos0, pos1)
+{
+	var rad1 = Atan2(pos0.X, pos0.Z);
+	var rad2 = Atan2(pos1.X, pos1.Z) ;
+	var res = (rad1 * (180 / PI)) - (rad2 * (180 / PI));
+	if (res < -180)
+		res += 360;
+	if (res > 180)
+		res -= 360;
+	return res;
+}
+
+function GetAngleXY(pos0, pos1)
+{
+	var rad1 = Atan2(pos0.X, pos0.Y);
+	var rad2 = Atan2(pos1.X, pos1.Y) ;
+	var res = (rad1 * (180 / PI)) - (rad2 * (180 / PI));
+	if (res < -180)
+		res += 360;
+	if (res > 180)
+		res -= 360;
+	return res;
+}
+
+function ManageDataIn()
+{
+	var received = "";
+	received = DataIn();
+	var res = "";
+	if (received != "")
+	{
+		sscanf(received, "%s", &res);
+	}
+	
+	return res;
+}
+
+
+
+/*
+//-------------------------------------------
+function ToolTip2(s_text, reverse, bkg_color, fgd_color, pos)
+//-------------------------------------------
+{
+	var mx = 0.0;
+	var my = 0.0;
+	var viewport = glget(GL_VIEWPORT);
+	
+	if ( valtype(reverse)=="" )
+		reverse = false;	
+	
+	if ( valtype(bkg_color)=="" )
+		bkg_color = [1.0,1.0,0.0,0.5];
+	
+	if ( valtype(fgd_color)=="" )
+		fgd_color = [0.0,0.0,0.0,1.0];	
+	
+	glColor(1.0,1.0,1.0,0.1);
+	
+	var _text = Split(s_text, "\\n"); 
+	
+	var max_len = 0;
+	for (var i = 0; i < len(_text); i++)
+	{
+		max_len = max(max_len, len(_text[i]));
+	}
+	
+	var fontsize = 13;
+	var pixelx = 1.0/viewport[2];
+	var pixely = 1.0/viewport[3];				
+	var dim = max_len * pixelx * fontsize * STRETCH_X;		
+	var ydim = (fontsize+4)*pixely;
+
+	mx = (Mouse.x/Viewport[2]);
+	if (reverse)
+		mx = mx-dim;			
+	my = (Mouse.y/Viewport[3]);
+	
+	ConsoleFont("Verdana", fontsize);
+	glEnable(GL_BLEND);
+	var l = (len(_text) + 5) * ydim;
+
+	for (var i = 0; i < len(_text); i++)
+	{
+		ConsoleColor(bkg_color[0], bkg_color[1], bkg_color[2], bkg_color[3]);
+		ConsoleFilledRect(mx, 1 - my + ydim + l - i * ydim, dim * 0.75, ydim);
+		
+		ConsoleColor(fgd_color[0], fgd_color[1], fgd_color[2], fgd_color[3]);
+		ConsoleText(mx + pixelx * 4, 0.997 - my + ydim / 3 + l - i * ydim, _text[i]);	//-my+margin
+	}
+	glDisable(GL_BLEND);
+}
+ */
+
+/* Function that returns the code for a generic procedural object VRP_<name>
+ * 
+ * Return: a integer value for the procedural object, or the mesh string name if it's not recognizable
+ */
+function GetMeshCode(mesh)
+{
+	if (valtype(mesh) == "S")
+	switch (mesh)
+	{
+		case "VRP_BOX": return VRP_BOX;
+		case "VRP_SPHERE": return VRP_SPHERE;
+		case "VRP_COLUMN": return VRP_COLUMN;
+		case "VRP_CONE": return VRP_CONE;
+		case "VRP_PYRAMID": return VRP_PYRAMID;
+		case "VRP_CYLINDER": return VRP_CYLINDER;
+		case "VRP_CONEFRUSTUM": return VRP_CONEFRUSTUM;
+		case "VRP_CROSSVAULT ": return VRP_CROSSVAULT ;
+		case "VRP_PRISM": return VRP_PRISM;
+		case "VRP_POLYGONAL_PYRAMID": return VRP_POLYGONAL_PYRAMID;
+		case "VRP_POLYGONAL_FRUSTUM": return VRP_POLYGONAL_FRUSTUM;
+		default: return mesh;
+	} else return mesh;
+}
+
+
+function MoveObjectToTarget(vr_obj, position_target, diff)
+{
+	if (diff == Void) diff = 0.0001;
+	
+	var quadmod = modulus(position_target) * modulus(position_target);
+	var pos = vr_obj.GetPosition();	
+	var d = distance(pos, position_target);
+	if (distance(pos, position_target) >= diff * quadmod)
+	{
+		pos = pos * 0.97 + 0.03 * position_target;
+		vr_obj.SetPosition(pos);
+		return false;
+	} else 
+		return true;
+} 
+
+function ModulateObjectMaterials(vr_obj, current_modulation, target_modulation, speed)
+{
+	if (speed == Void) speed = 0.02;
+	var res = array(2); 
+	res[0] = false;
+	var count = 0;
+	
+	for (var i = 0; i < 3; i++)
+	{
+		if (current_modulation[i] < target_modulation[i])
+		{
+			current_modulation[i] = current_modulation[i] + speed > target_modulation[i] ? target_modulation[i] : current_modulation[i] + speed;
+			res[0] = true;
+		} else
+		if (current_modulation[i] > target_modulation[i])
+		{
+			current_modulation[i] = current_modulation[i] - speed < target_modulation[i] ? target_modulation[i] : current_modulation[i] - speed;
+			res[0] = true; 
+		} 
+	}
+	
+	if (res[0])
+		vr_obj.ModulateMaterials(current_modulation);
+	
+	res[1] = current_modulation;
+	
+	return res; 
+	
+/*  if (modulate_active > 0)
+	{
+		var c_mod = 0;
+		for (var i = 0; i < 3; i++)
+		{
+			if (current_modulation[i] < target_modulation[i] + speed * 3 / 4 && current_modulation[i] < 1)
+			{
+				current_modulation[i] = current_modulation[i] + speed < 1 ? current_modulation[i] + speed : 1;
+				c_mod++;
+			}
+		}	
+		res[0] = c_mod > 0 ? res[0] : 0;
+		vr_obj.ModulateMaterials(current_modulation);				
+	} else
+	{
+		var c_mod = 0;
+		for (var i = 0; i < 3; i++)
+		{
+			if (current_modulation[i] > target_modulation[i] - speed * 3 / 4 && current_modulation[i] > 0)
+			{
+				current_modulation[i] = current_modulation[i] - speed > 0 ? current_modulation[i] - speed : 0;
+				c_mod++;
+			}
+		}	
+		res[0] = c_mod > 0 ? res[0] : 0;
+		vr_obj.ModulateMaterials(current_modulation);
+	} 
+	res[1] = current_modulation;
+	
+	return res;
+	* 
+	*/
+} 
+
+
+function StringToVK(src)
+{
+	var res = src; 
+	if (str_contains(src, "VK"))
+	{
+		switch (src)
+		{
+			case "VK_LBUTTON": res = VK_LBUTTON;
+			break;
+			case "VK_RBUTTON": res = VK_RBUTTON;
+			break;
+			case "VK_CANCEL": res = VK_CANCEL;
+			break;
+			case "VK_MBUTTON": res = VK_MBUTTON;
+			break;
+			case "VK_BACK": res = VK_BACK;
+			break;
+			case "VK_TAB": res = VK_TAB;
+			break;
+			case "VK_CLEAR": res = VK_CLEAR;
+			break;
+			case "VK_RETURN": res = VK_RETURN;
+			break;
+			case "VK_SHIFT": res = VK_SHIFT;
+			break;
+			case "VK_CONTROL": res = VK_CONTROL;
+			break;
+			case "VK_MENU": res = VK_MENU;
+			break;
+			case "VK_PAUSE": res = VK_PAUSE;
+			break;
+			case "VK_CAPITAL": res = VK_CAPITAL;
+			break;
+			case "VK_ESCAPE": res = VK_ESCAPE;
+			break;
+			case "VK_SPACE": res = VK_SPACE;
+			break;
+			case "VK_PRIOR": res = VK_PRIOR;
+			break;
+			case "VK_NEXT": res = VK_NEXT;
+			break;
+			case "VK_END": res = VK_END;
+			break;
+			case "VK_HOME": res = VK_HOME;
+			break;
+			case "VK_LEFT": res = VK_LEFT;
+			break;
+			case "VK_UP": res = VK_UP;
+			break;
+			case "VK_RIGHT": res = VK_RIGHT;
+			break;
+			case "VK_DOWN": res = VK_DOWN;
+			break;
+			case "VK_SELECT": res = VK_SELECT;
+			break;
+			case "VK_PRINT": res = VK_PRINT;
+			break;
+			case "VK_EXECUTE": res = VK_EXECUTE;
+			break;
+			case "VK_SNAPSHOT": res = VK_SNAPSHOT;
+			break;
+			case "VK_INSERT": res = VK_INSERT;
+			break;
+			case "VK_DELETE": res = VK_DELETE;
+			break;
+			case "VK_HELP": res = VK_HELP;
+			break;
+			case "VK_F1": res = VK_F1;
+			break;
+			case "VK_F2": res = VK_F2;
+			break;
+			case "VK_F3": res = VK_F3;
+			break;
+			case "VK_F4": res = VK_F4;
+			break;
+			case "VK_F5": res = VK_F5;
+			break;
+			case "VK_F6": res = VK_F6;
+			break;
+			case "VK_F7": res = VK_F7;
+			break;
+			case "VK_F8": res = VK_F8;
+			break;
+			case "VK_F9": res = VK_F9;
+			break;
+			case "VK_F10": res = VK_F10;
+			break;
+			case "VK_F11": res = VK_F11;
+			break;
+			case "VK_F12": res = VK_F12;
+			break;
+			default: 
+				Outputln("WARNING: virtual key "+src+" unknown");
+				res = Void;
+			break;			
+		}
+	}
+	return res;
+}
+
+
+function StringToCursor(src)
+{
+	var res = src; 
+	if (str_contains(src, "VR_CUR_"))
+	{
+		switch (src)
+		{
+			case "VR_CUR_ARROW": res = VR_CUR_ARROW;
+			break;
+			case "VR_CUR_CROSS": res = VR_CUR_CROSS;
+			break;
+			case "VR_CUR_HAND": res = VR_CUR_HAND;
+			break;
+			case "VR_CUR_HELP": res = VR_CUR_HELP;
+			break;
+			case "VR_CUR_IBEAM": res = VR_CUR_IBEAM;
+			break;
+			case "VR_CUR_NO": res = VR_CUR_NO;
+			break;
+			case "VR_CUR_SIZEALL": res = VR_CUR_SIZEALL;
+			break;
+			case "VR_CUR_SIZENESW": res = VR_CUR_SIZENESW;
+			break;
+			case "VR_CUR_SIZENS": res = VR_CUR_SIZENS;
+			break;
+			case "VR_CUR_SIZENWSE": res = VR_CUR_SIZENWSE;
+			break;
+			case "VR_CUR_SIZEWE": res = VR_CUR_SIZEWE;
+			break;
+			case "VR_CUR_UPARROW": res = VR_CUR_UPARROW;
+			break;
+			case "VR_CUR_WAIT": res = VR_CUR_WAIT;
+			break;
+			case "VR_CUR_NONE": res = VR_CUR_NONE;
+			break;
+			default: 
+				Outputln("WARNING: virtual cursor "+src+" unknown");
+				res = Void;
+			break;			
+		}
+	}
+	return res;
+}
+ 
+function TranslateStringForGenre(values, genre)
+{
+	if (values == Void) return "";
+	
+	var t = Split(values, "*");
+	var res = t[len(t) - 1];
+	if (res == Void) res = "";
+	var male = genre == Void || genre == "m"; 
+	
+	var c = male ? "o" : "a"; 
+	
+	for (var i = len(t) - 2; i >= 0; i--)
+		res = t[i] + c + res;
+		
+	t = Void;	
+	t = Split(res, "#");
+	if (len(t) > 1)
+	{
+		res = "";
+		for (var i = 0; i < len(t); i++)
+		{
+			if (i % 3 == 1)
+			{
+				var l = Split(t[i], "/");
+				if (len(l) > 1)
+				{
+					var ch = male ? l[0] : l[1]; 
+					res += ch;
+				} else
+					res += t[i];
+			} else
+				res += t[i];
+		}	
+	} 
+	return res;
+} 
+
+
+function aconcat(a, c)
+{
+	var res = a;
+	if (c != Void)
+		for (var i = 0; i < len(c); i++)
+			aadd(res, c[i]);
+	return res;
+}
+
+
+var _______fullscreen = Void;
+var _______size = Void;
+ 
+function SetFullScreen()
+{
+	if (_______fullscreen == Void)
+		_______fullscreen = CVmWebBrowser();
+	
+	var t = glGet(GL_VIEWPORT);
+	_______size = Vector(2);
+	_______size[0] = t[2];
+	_______size[1] = t[3];	
+	_______fullscreen.Fullscreen();
+}
+
+function ExitFullScreen()
+{
+	if (_______fullscreen == Void)
+		_______fullscreen = CVmWebBrowser();
+				
+	if (_______fullscreen != Void)
+	{
+		if (_______size != Void)
+			_______fullscreen.SetSize(_______size);
+	}
+}
+
+function SetScreenSize(width, height)
+{
+	if (_______fullscreen == Void)
+		_______fullscreen = CVmWebBrowser();
+	
+	_______size = [width, height];
+	_______fullscreen.SetSize(_______size);
+}
