@@ -1,0 +1,8 @@
+﻿  curlWikimedia.cpp
+     Creating library C:\Users\michelemallia\source\repos\curlWikimedia\Release\curlWikimedia.lib and object C:\Users\michelemallia\source\repos\curlWikimedia\Release\curlWikimedia.exp
+  Generating code
+  241 of 314 functions (76.8%) were compiled, the rest were copied from previous compilation.
+    233 functions were new in current compilation
+    24 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  curlWikimedia.vcxproj -> C:\Users\michelemallia\source\repos\curlWikimedia\Release\curlWikimedia.dll
